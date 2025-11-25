@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Оставить голосовой отзыв — {{ company.name }}</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .btn { padding: 10px 16px; cursor: pointer; margin-top: 10px; }
+    textarea { width: 100%; min-height: 150px; }
+  </style>
+</head>
+<body>
+  <h1>Отзыв для {{ company.name }}</h1>
+  {% if company.logo_path %}
+    <img src="{{ company.logo_path }}" alt="Логотип" style="max-height: 80px;">
+  {% endif %}
+
+  <div id="step1" class="step active">
+    <h2>Шаг 1. Запишите голосовой отзыв</h2>
+    <label>Ваше имя (или ник):<br>
+      <input type="text" id="userName" />
+    </label>
+    <div style="margin-top: 10px;">
+      <button id="startBtn" class="btn">Начать запись</button>
+      <button id="stopBtn" class="btn" disabled>Остановить запись</button>
+    </div>
+    <p id="recordStatus"></p>
+  </div>
+
+  <div id="step2" class="step">
+    <h2>Шаг 2. Проверка текста</h2>
+    <p><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
+    <p><strong>Текст, который понял ИИ:</strong></p>
+    <p id="aiText"></p>
+    <button id="editBtn" class="btn">Редактировать</button>
+  </div>
+
+  <div id="step3" class="step">
+    <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
+    <textarea id="finalText"></textarea>
+    <br>
+    <button id="sendBtn" class="btn">Отправить отзыв</button>
+    <p id="sendStatus"></p>
+  </div>
+
+  <script>
+    const companySlug = "{{ company.slug }}";
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let reviewId = null;
+    let normalizedText = "";
+
+    const step1 = document.getElementById("step1");
+    const step2 = document.getElementById("step2");
+    const step3 = document.getElementById("step3");
+
+    function showStep(n) {
+      [step1, step2, step3].forEach((el, i) => {
+        el.classList.toggle("active", i === (n-1));
+      });
+    }
+
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const recordStatus = document.getElementById("recordStatus");
+    const userNameInput = document.getElementById("userName");
+    const aiText = document.getElementById("aiText");
+    const sentimentSpan = document.getElementById("sentimentSpan");
+    const editBtn = document.getElementById("editBtn");
+    const finalText = document.getElementById("finalText");
+    const sendBtn = document.getElementById("sendBtn");
+    const sendStatus = document.getElementById("sendStatus");
+
+    startBtn.onclick = async () => {
+      audioChunks = [];
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => {
+          audioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = onRecordStop;
+        mediaRecorder.start();
+        recordStatus.textContent = "Запись идёт...";
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      } catch (e) {
+        recordStatus.textContent = "Не удалось получить доступ к микрофону.";
+      }
+    };
+
+    stopBtn.onclick = () => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      stopBtn.disabled = true;
+      startBtn.disabled = false;
+      recordStatus.textContent = "Обработка записи...";
+    };
+
+    async function onRecordStop() {
+      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const formData = new FormData();
+      formData.append("audio", blob, "record.webm");
+      formData.append("user_name", userNameInput.value || "");
+
+      const res = await fetch(`/api/public/${companySlug}/upload-audio`, {
+        method: "POST",
+        body: formData
+      });
+
+      if (!res.ok) {
+        recordStatus.textContent = "Ошибка при отправке аудио.";
+        return;
+      }
+
+      const data = await res.json();
+      reviewId = data.review_id;
+      normalizedText = data.normalized_text;
+      aiText.textContent = data.normalized_text;
+      sentimentSpan.textContent = data.sentiment;
+
+      recordStatus.textContent = "";
+      showStep(2);
+    }
+
+    editBtn.onclick = () => {
+      finalText.value = normalizedText;
+      showStep(3);
+    };
+
+    sendBtn.onclick = async () => {
+      sendStatus.textContent = "Отправка...";
+      const body = {
+        text: finalText.value,
+        user_name: userNameInput.value || null,
+      };
+
+      const res = await fetch(`/api/public/reviews/${reviewId}/finalize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (data.status === "ok" && data.email_sent) {
+        sendStatus.textContent = "Спасибо! Ваш отзыв отправлен.";
+        sendBtn.disabled = true;
+      } else {
+        sendStatus.textContent = "Отзыв сохранён, но письмо не удалось отправить (ошибка email).";
+      }
+    };
+  </script>
+</body>
+</html>

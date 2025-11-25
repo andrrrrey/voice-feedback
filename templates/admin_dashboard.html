@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Админ — панель</title>
+</head>
+<body>
+  <h1>Админ-панель</h1>
+  <p>Здесь можно реализовать интерфейс для работы с API:</p>
+  <ul>
+    <li>Форма создания компании (POST /api/admin/companies)</li>
+    <li>Список компаний (GET /api/admin/companies)</li>
+    <li>Загрузка логотипа (POST /api/admin/companies/{id}/logo)</li>
+    <li>Список отзывов (GET /api/admin/reviews)</li>
+    <li>Экспорт отзывов в CSV (GET /api/admin/reviews/export)</li>
+  </ul>
+  <p>Для production лучше сделать здесь полноценный интерфейс на React/Vue или простом JS.</p>
+</body>
+</html>
