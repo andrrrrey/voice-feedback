@@ -93,7 +93,8 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_company)
 
-    public_url = f"/r/{db_company.slug}"
+# Генерация QR-кода на публичную форму
+    public_url = f"https://dev.futuguru.com/voice-feedback/r/{db_company.slug}"
     qr_img = qrcode.make(public_url)
     qr_path = static_dir / "qr" / f"{db_company.slug}.png"
     qr_img.save(qr_path)
