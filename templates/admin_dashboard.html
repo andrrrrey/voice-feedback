@@ -1,19 +1,356 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Админ — панель</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f5f5f7;
+    }
+    h1 {
+      margin-bottom: 16px;
+    }
+    h2 {
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+    }
+    input[type="text"],
+    input[type="email"] {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      margin-top: 4px;
+    }
+    button {
+      padding: 8px 14px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+    }
+    button.secondary {
+      background: #6b7280;
+    }
+    button.small {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    th {
+      text-align: left;
+      background: #f9fafb;
+    }
+    .muted {
+      color: #6b7280;
+      font-size: 13px;
+    }
+    .status {
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      font-size: 11px;
+      margin-right: 4px;
+    }
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .logo-preview {
+      max-height: 32px;
+    }
+    .qr-preview {
+      max-height: 48px;
+    }
+    .flex {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  </style>
 </head>
 <body>
-  <h1>Админ-панель</h1>
-  <p>Здесь можно реализовать интерфейс для работы с API:</p>
-  <ul>
-    <li>Форма создания компании (POST /api/admin/companies)</li>
-    <li>Список компаний (GET /api/admin/companies)</li>
-    <li>Загрузка логотипа (POST /api/admin/companies/{id}/logo)</li>
-    <li>Список отзывов (GET /api/admin/reviews)</li>
-    <li>Экспорт отзывов в CSV (GET /api/admin/reviews/export)</li>
-  </ul>
-  <p>Для production лучше сделать здесь полноценный интерфейс на React/Vue или простом JS.</p>
+  <h1>Админ-панель Voice Feedback</h1>
+  <p class="muted">
+    Здесь можно создавать компании, получать ссылки/QR-коды и работать с отзывами.
+  </p>
+
+  <!-- Блок создания компании -->
+  <div class="card">
+    <h2>Создать компанию</h2>
+    <form id="createCompanyForm">
+      <label>
+        Название компании
+        <input type="text" id="companyName" required />
+      </label>
+      <label>
+        Slug (для URL, латиница, без пробелов, например <code>beauty-salon-lux</code>)
+        <input type="text" id="companySlug" required />
+      </label>
+      <label>
+        Email (куда отправлять отзывы)
+        <input type="email" id="companyEmail" required />
+      </label>
+      <button type="submit">Создать компанию</button>
+      <span id="createStatus" class="status"></span>
+    </form>
+  </div>
+
+  <!-- Список компаний -->
+  <div class="card">
+    <div class="flex">
+      <h2 style="margin-bottom: 0;">Компании</h2>
+      <button id="refreshCompanies" type="button" class="secondary small">Обновить список</button>
+    </div>
+    <div id="companiesContainer" class="muted" style="margin-top: 8px;">Загрузка...</div>
+  </div>
+
+  <!-- Отчёты -->
+  <div class="card">
+    <h2>Отзывы</h2>
+    <p class="muted">
+      CSV-файл можно открыть в Excel/Google Sheets.
+    </p>
+    <button id="downloadAllCsv" type="button" class="secondary small">
+      Скачать все отзывы (CSV)
+    </button>
+    <span class="muted" style="margin-left: 8px;">или скачай по компании из таблицы.</span>
+  </div>
+
+  <script>
+    // Важно: сервис висит под /voice-feedback/, поэтому префикс:
+    const BASE = '/voice-feedback';
+
+    const createForm = document.getElementById('createCompanyForm');
+    const nameInput = document.getElementById('companyName');
+    const slugInput = document.getElementById('companySlug');
+    const emailInput = document.getElementById('companyEmail');
+    const createStatus = document.getElementById('createStatus');
+
+    const companiesContainer = document.getElementById('companiesContainer');
+    const refreshBtn = document.getElementById('refreshCompanies');
+    const downloadAllCsvBtn = document.getElementById('downloadAllCsv');
+
+    let companies = [];
+
+    async function loadCompanies() {
+      companiesContainer.textContent = 'Загрузка...';
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies`);
+        if (!res.ok) throw new Error('Ошибка загрузки компаний');
+        companies = await res.json();
+        renderCompanies();
+      } catch (e) {
+        companiesContainer.textContent = 'Не удалось загрузить список компаний.';
+        console.error(e);
+      }
+    }
+
+    function renderCompanies() {
+      if (!companies.length) {
+        companiesContainer.textContent = 'Компаний пока нет.';
+        return;
+      }
+
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th>ID</th>
+          <th>Компания</th>
+          <th>Пути / ссылки</th>
+          <th>Логотип / QR</th>
+          <th>Действия</th>
+        </tr>
+      `;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      companies.forEach((c) => {
+        const tr = document.createElement('tr');
+
+        const tdId = document.createElement('td');
+        tdId.textContent = c.id;
+        tr.appendChild(tdId);
+
+        const tdName = document.createElement('td');
+        tdName.innerHTML = `
+          <strong>${c.name}</strong><br>
+          <span class="muted">Slug: ${c.slug}</span><br>
+          <span class="muted">Email: ${c.email}</span>
+        `;
+        tr.appendChild(tdName);
+
+        const publicUrl = `${window.location.origin}${BASE}/r/${c.slug}`;
+        const qrUrl = c.qr_path ? `${BASE}${c.qr_path}` : null;
+        const logoUrl = c.logo_path ? `${BASE}${c.logo_path}` : null;
+
+        const tdLinks = document.createElement('td');
+        tdLinks.innerHTML = `
+          <span class="tag">Публичная страница</span><br>
+          <a href="${publicUrl}" target="_blank">${publicUrl}</a>
+        `;
+        tr.appendChild(tdLinks);
+
+        const tdMedia = document.createElement('td');
+        tdMedia.innerHTML = `
+          ${logoUrl ? `<div><span class="muted">Логотип:</span><br><img class="logo-preview" src="${logoUrl}" alt="logo"></div>` : '<div class="muted">Логотип: нет</div>'}
+          ${qrUrl ? `<div style="margin-top:4px;"><span class="muted">QR:</span><br><img class="qr-preview" src="${qrUrl}" alt="qr"></div>` : '<div class="muted">QR будет сгенерирован автоматически</div>'}
+        `;
+        tr.appendChild(tdMedia);
+
+        const tdActions = document.createElement('td');
+        const actions = document.createElement('div');
+        actions.className = 'row-actions';
+
+        // Загрузка логотипа
+        const logoInputId = `logo-input-${c.id}`;
+        const logoBlock = document.createElement('div');
+        logoBlock.innerHTML = `
+          <input type="file" id="${logoInputId}" accept="image/*" style="max-width:160px; font-size:12px; margin-bottom:4px;">
+          <button class="small secondary" type="button">Загрузить</button>
+        `;
+        const uploadBtn = logoBlock.querySelector('button');
+        uploadBtn.onclick = () => uploadLogo(c.id, logoInputId);
+
+        // CSV по компании
+        const csvBtn = document.createElement('button');
+        csvBtn.type = 'button';
+        csvBtn.className = 'small secondary';
+        csvBtn.textContent = 'CSV по компании';
+        csvBtn.onclick = () => downloadCsvForCompany(c.id);
+
+        actions.appendChild(logoBlock);
+        actions.appendChild(csvBtn);
+        tdActions.appendChild(actions);
+
+        tr.appendChild(tdActions);
+
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+
+      companiesContainer.innerHTML = '';
+      companiesContainer.appendChild(table);
+    }
+
+    async function uploadLogo(companyId, inputId) {
+      const input = document.getElementById(inputId);
+      if (!input.files.length) {
+        alert('Выберите файл логотипа');
+        return;
+      }
+      const file = input.files[0];
+      const fd = new FormData();
+      fd.append('file', file);
+
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/logo`, {
+          method: 'POST',
+          body: fd,
+        });
+        if (!res.ok) throw new Error('Ошибка загрузки логотипа');
+        await res.json();
+        await loadCompanies();
+      } catch (e) {
+        alert('Не удалось загрузить логотип');
+        console.error(e);
+      }
+    }
+
+    function downloadCsvForCompany(companyId) {
+      const url = `${BASE}/api/admin/reviews/export?company_id=${companyId}`;
+      window.open(url, '_blank');
+    }
+
+    // Создание компании
+    createForm.onsubmit = async (e) => {
+      e.preventDefault();
+      createStatus.textContent = '';
+      const payload = {
+        name: nameInput.value.trim(),
+        slug: slugInput.value.trim(),
+        email: emailInput.value.trim(),
+      };
+      if (!payload.name || !payload.slug || !payload.email) {
+        createStatus.textContent = 'Заполните все поля.';
+        return;
+      }
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const msg = data.detail || 'Ошибка создания компании';
+          createStatus.textContent = msg;
+          return;
+        }
+        await res.json();
+        createStatus.textContent = 'Компания создана.';
+        nameInput.value = '';
+        slugInput.value = '';
+        emailInput.value = '';
+        await loadCompanies();
+      } catch (e) {
+        console.error(e);
+        createStatus.textContent = 'Ошибка сети при создании компании.';
+      }
+    };
+
+    refreshBtn.onclick = () => loadCompanies();
+
+    downloadAllCsvBtn.onclick = () => {
+      const url = `${BASE}/api/admin/reviews/export`;
+      window.open(url, '_blank');
+    };
+
+    // начальная загрузка
+    loadCompanies();
+  </script>
 </body>
 </html>

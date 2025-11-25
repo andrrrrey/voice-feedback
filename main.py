@@ -4,7 +4,7 @@ from typing import List, Optional
 import csv
 from io import StringIO
 
-from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, Response, status
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -111,6 +111,30 @@ def list_companies(db: Session = Depends(get_db)):
     return companies
 
 
+@app.delete("/api/admin/companies/{company_id}")
+def delete_company(company_id: int, db: Session = Depends(get_db)):
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    db.query(Review).filter(Review.company_id == company_id).delete()
+
+    for path_attr in ["qr_path", "logo_path"]:
+        path_value = getattr(company, path_attr)
+        if not path_value:
+            continue
+        relative_path = path_value
+        if relative_path.startswith("/static/"):
+            relative_path = relative_path.replace("/static/", "", 1)
+        file_path = static_dir / relative_path
+        if file_path.exists():
+            file_path.unlink()
+
+    db.delete(company)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    
+    
 @app.post("/api/admin/companies/{company_id}/logo")
 async def upload_logo(
     company_id: int,
