@@ -50,6 +50,9 @@
     button.secondary {
       background: #6b7280;
     }
+    button.danger {
+      background: #dc2626;
+    }    
     button.small {
       padding: 4px 8px;
       font-size: 12px;
@@ -100,6 +103,7 @@
     }
     .qr-preview {
       max-height: 48px;
+      cursor: zoom-in;
     }
     .flex {
       display: flex;
@@ -107,6 +111,39 @@
       align-items: center;
       flex-wrap: wrap;
     }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal-card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.16);
+      max-width: 420px;
+      width: calc(100% - 24px);
+      text-align: center;
+    }
+    .modal-card img {
+      max-width: 100%;
+      height: auto;
+    }
+    .modal-card h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }    
   </style>
 </head>
 <body>
@@ -157,6 +194,16 @@
     <span class="muted" style="margin-left: 8px;">или скачай по компании из таблицы.</span>
   </div>
 
+  <div id="qrModal" class="modal-backdrop">
+    <div class="modal-card">
+      <h3>QR-код</h3>
+      <img id="qrModalImg" src="" alt="QR код">
+      <div style="margin-top: 12px;">
+        <button id="closeQrModal" class="secondary small" type="button">Закрыть</button>
+      </div>
+    </div>
+  </div>
+  
   <script>
     // Важно: сервис висит под /voice-feedback/, поэтому префикс:
     const BASE = '/voice-feedback';
@@ -235,8 +282,9 @@
 
         const tdMedia = document.createElement('td');
         tdMedia.innerHTML = `
-          ${logoUrl ? `<div><span class="muted">Логотип:</span><br><img class="logo-preview" src="${logoUrl}" alt="logo"></div>` : '<div class="muted">Логотип: нет</div>'}
-          ${qrUrl ? `<div style="margin-top:4px;"><span class="muted">QR:</span><br><img class="qr-preview" src="${qrUrl}" alt="qr"></div>` : '<div class="muted">QR будет сгенерирован автоматически</div>'}
+          ${logoUrl ? `<div><span class="muted">Логотип:</span><br><img class="logo-preview" src="${logoUrl}" alt="logo"></div>`
+ : '<div class="muted">Логотип: нет</div>'}
+          ${qrUrl ? `<div style="margin-top:4px;"><span class="muted">QR:</span><br><img class="qr-preview" data-qr="${qrUrl}" src="${qrUrl}" alt="qr"></div>` : '<div class="muted">QR будет сгенерирован автоматически</div>'}
         `;
         tr.appendChild(tdMedia);
 
@@ -261,8 +309,24 @@
         csvBtn.textContent = 'CSV по компании';
         csvBtn.onclick = () => downloadCsvForCompany(c.id);
 
+        // Отзывы
+        const reviewsBtn = document.createElement('button');
+        reviewsBtn.type = 'button';
+        reviewsBtn.className = 'small';
+        reviewsBtn.textContent = 'Отзывы';
+        reviewsBtn.onclick = () => openReviewsPage(c.id);
+
+        // Удаление
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'small danger';
+        deleteBtn.textContent = 'Удалить';
+        deleteBtn.onclick = () => deleteCompany(c.id, c.name);
+        
         actions.appendChild(logoBlock);
         actions.appendChild(csvBtn);
+        actions.appendChild(reviewsBtn);
+        actions.appendChild(deleteBtn);
         tdActions.appendChild(actions);
 
         tr.appendChild(tdActions);
@@ -274,6 +338,24 @@
 
       companiesContainer.innerHTML = '';
       companiesContainer.appendChild(table);
+
+      document.querySelectorAll('[data-qr]').forEach((img) => {
+        img.addEventListener('click', () => openQrModal(img.dataset.qr));
+      });
+    }
+
+    function openQrModal(qrUrl) {
+      const modal = document.getElementById('qrModal');
+      const img = document.getElementById('qrModalImg');
+      img.src = qrUrl;
+      modal.classList.add('active');
+    }
+
+    function closeQrModal() {
+      const modal = document.getElementById('qrModal');
+      const img = document.getElementById('qrModalImg');
+      img.src = '';
+      modal.classList.remove('active');
     }
 
     async function uploadLogo(companyId, inputId) {
@@ -300,11 +382,29 @@
       }
     }
 
+    async function deleteCompany(companyId, companyName) {
+      if (!confirm(`Удалить компанию "${companyName}" со всеми отзывами?`)) return;
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Ошибка удаления');
+        await loadCompanies();
+      } catch (e) {
+        alert('Не удалось удалить компанию');
+        console.error(e);
+      }
+    }
+    
     function downloadCsvForCompany(companyId) {
       const url = `${BASE}/api/admin/reviews/export?company_id=${companyId}`;
       window.open(url, '_blank');
     }
 
+    function openReviewsPage(companyId) {
+      window.location.href = `${BASE}/admin/companies/${companyId}/reviews`;
+    }
+    
     // Создание компании
     createForm.onsubmit = async (e) => {
       e.preventDefault();
@@ -349,6 +449,13 @@
       window.open(url, '_blank');
     };
 
+    document.getElementById('closeQrModal').onclick = closeQrModal;
+    document.getElementById('qrModal').addEventListener('click', (e) => {
+      if (e.target.id === 'qrModal') {
+        closeQrModal();
+      }
+    });
+    
     // начальная загрузка
     loadCompanies();
   </script>

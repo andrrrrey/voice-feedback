@@ -4,48 +4,143 @@
   <meta charset="UTF-8">
   <title>Оставить голосовой отзыв — {{ company.name }}</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .step { display: none; }
+    :root {
+      --bg: #f5f6fb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --muted: #6b7280;
+      --text: #0f172a;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 0% 0%, #dbeafe 0, rgba(219,234,254,0) 35%),
+                  radial-gradient(circle at 100% 20%, #c7d2fe 0, rgba(199,210,254,0) 30%),
+                  var(--bg);
+      color: var(--text);
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto 32px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+      border: 1px solid var(--border);
+      margin-top: 16px;
+    }
+    h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
+    h2 { margin: 0 0 12px; font-size: 20px; }
+    p { margin: 6px 0 12px; color: var(--muted); }
+    .logo {
+      max-height: 90px;
+      margin: 12px 0 4px;
+    }    .step { display: none; }
     .step.active { display: block; }
-    .btn { padding: 10px 16px; cursor: pointer; margin-top: 10px; }
-    textarea { width: 100%; min-height: 150px; }
+    .input-group { margin: 10px 0 16px; }
+    label { font-weight: 600; display: block; margin-bottom: 6px; color: #1f2937; }
+    input[type="text"], textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      font-size: 15px;
+      box-sizing: border-box;
+      background: #f8fafc;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
+      background: #fff;
+    }
+    textarea { min-height: 160px; resize: vertical; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+    }
+    .btn.secondary {
+      background: #6b7280;
+      box-shadow: none;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .info-box {
+      background: #eef2ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .status { margin-top: 8px; font-size: 14px; color: var(--muted); }
   </style>
 </head>
 <body>
   <h1>Отзыв для {{ company.name }}</h1>
-  {% if company.logo_path %}
-    <img src="{{ company.logo_path }}" alt="Логотип" style="max-height: 80px;">
-  {% endif %}
+  <div class="container">
+    <h1>Отзыв для {{ company.name }}</h1>
+    <p>Запишите короткий отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
+    {% if company.logo_path %}
+      <img src="{{ company.logo_path }}" alt="Логотип" class="logo">
+    {% endif %}
 
-  <div id="step1" class="step active">
-    <h2>Шаг 1. Запишите голосовой отзыв</h2>
-    <label>Ваше имя (или ник):<br>
-      <input type="text" id="userName" />
-    </label>
-    <div style="margin-top: 10px;">
-      <button id="startBtn" class="btn">Начать запись</button>
-      <button id="stopBtn" class="btn" disabled>Остановить запись</button>
+    <div class="card step active" id="step1">
+      <h2>Шаг 1. Запишите голосовой отзыв</h2>
+      <div class="input-group">
+        <label for="userName">Ваше имя (или ник)</label>
+        <input type="text" id="userName" placeholder="Иван">
+      </div>
+      <div class="btn-row">
+        <button id="startBtn" class="btn" type="button">Начать запись</button>
+        <button id="stopBtn" class="btn secondary" type="button" disabled>Остановить</button>
+      </div>
+      <div class="info-box">Запись делается через микрофон устройства. Не закрывайте вкладку, пока идёт запись.</div>
+      <p id="recordStatus" class="status"></p>
     </div>
-    <p id="recordStatus"></p>
-  </div>
 
-  <div id="step2" class="step">
-    <h2>Шаг 2. Проверка текста</h2>
-    <p><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
-    <p><strong>Текст, который понял ИИ:</strong></p>
-    <p id="aiText"></p>
-    <button id="editBtn" class="btn">Редактировать</button>
-  </div>
+    <div class="card step" id="step2">
+      <h2>Шаг 2. Проверка текста</h2>
+      <p><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
+      <p><strong>Текст, который понял ИИ:</strong></p>
+      <div class="info-box" id="aiText"></div>
+      <div class="btn-row">
+        <button id="editBtn" class="btn" type="button">Редактировать</button>
+        <button class="btn secondary" type="button" onclick="showStep(1)">Записать ещё раз</button>
+      </div>
+    </div>
 
-  <div id="step3" class="step">
-    <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
-    <textarea id="finalText"></textarea>
-    <br>
-    <button id="sendBtn" class="btn">Отправить отзыв</button>
-    <p id="sendStatus"></p>
+    <div class="card step" id="step3">
+      <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
+      <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..."></textarea>
+      <div class="btn-row">
+        <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
+        <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
+      </div>
+      <p id="sendStatus" class="status"></p>
+    </div>
   </div>
 
   <script>
+    // Сервис висит под /voice-feedback, поэтому используем префикс:
+    const BASE = '/voice-feedback';
     const companySlug = "{{ company.slug }}";
 
     let mediaRecorder;
@@ -107,7 +202,7 @@
       formData.append("audio", blob, "record.webm");
       formData.append("user_name", userNameInput.value || "");
 
-      const res = await fetch(`/api/public/${companySlug}/upload-audio`, {
+      const res = await fetch(`${BASE}/api/public/${companySlug}/upload-audio`, {
         method: "POST",
         body: formData
       });
@@ -139,7 +234,7 @@
         user_name: userNameInput.value || null,
       };
 
-      const res = await fetch(`/api/public/reviews/${reviewId}/finalize`, {
+      const res = await fetch(`${BASE}/api/public/reviews/${reviewId}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)

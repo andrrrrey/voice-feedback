@@ -78,6 +78,18 @@ def require_admin(request: Request):
         raise HTTPException(status_code=401, detail="Not authorized")
 
 
+@app.get("/admin/companies/{company_id}/reviews", response_class=HTMLResponse)
+async def company_reviews_page(company_id: int, request: Request, db: Session = Depends(get_db)):
+    require_admin(request)
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    return templates.TemplateResponse(
+        "company_reviews.html",
+        {"request": request, "company": company},
+    )
+    
+    
 @app.post("/api/admin/companies", response_model=CompanyOut)
 def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
     existing = db.query(Company).filter(Company.slug == company.slug).first()
