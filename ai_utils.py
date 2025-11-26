@@ -15,6 +15,10 @@ YANDEX_SPEECHKIT_STT_URL = os.getenv(
     "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize",
 )
 YANDEX_SPEECHKIT_LANG = os.getenv("YANDEX_SPEECHKIT_LANG", "ru-RU")
+
+# 🔹 ДОБАВИЛ: формат аудио для STT (по умолчанию — oggopus)
+YANDEX_SPEECHKIT_FORMAT = os.getenv("YANDEX_SPEECHKIT_FORMAT", "oggopus")
+
 YANDEX_GPT_URL = os.getenv(
     "YANDEX_GPT_URL",
     "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
@@ -45,16 +49,24 @@ def _auth_headers() -> dict:
 def transcribe_audio_with_speechkit(audio_path: str) -> str:
     """
     Отправляет аудиофайл в Yandex SpeechKit и возвращает распознанный текст.
+    Ожидается, что на вход подаётся OGG Opus (format=oggopus).
     """
 
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
     headers = _auth_headers()
+    headers["Content-Type"] = "application/octet-stream"
     if not YANDEX_FOLDER_ID:
         raise RuntimeError("YANDEX_FOLDER_ID не задан")
 
-    params = {"folderId": YANDEX_FOLDER_ID, "lang": YANDEX_SPEECHKIT_LANG}
+    # 🔹 ДОБАВИЛ: явный формат, чтобы SpeechKit ждал oggopus,
+    # а не дефолтный ogg без уточнения.
+    params = {
+        "folderId": YANDEX_FOLDER_ID,
+        "lang": YANDEX_SPEECHKIT_LANG,
+        "format": YANDEX_SPEECHKIT_FORMAT,
+    }
 
     with open(audio_path, "rb") as f:
         audio_bytes = f.read()
@@ -68,7 +80,12 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
     )
 
     if response.status_code != 200:
-        logger.error("SpeechKit error: %s", response.text)
+        # 🔹 Чуть более говорящий лог: статус + тело
+        logger.error(
+            "SpeechKit error (status=%s): %s",
+            response.status_code,
+            response.text,
+        )
         raise RuntimeError(
             f"SpeechKit STT request failed with status {response.status_code}"
         )

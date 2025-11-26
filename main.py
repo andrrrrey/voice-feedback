@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 import csv
 from io import StringIO
+import subprocess
 
 from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, Response, status
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -237,24 +238,72 @@ async def upload_audio(
     audio: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    """
+    Принимает аудио от публичной формы, при необходимости конвертирует webm -> ogg,
+    отправляет ogg в SpeechKit, сохраняет черновик отзыва.
+    """
     company = db.query(Company).filter(Company.slug == company_slug).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    ext = os.path.splitext(audio.filename)[1] or ".webm"
     safe_user = user_name or "anon"
-    audio_filename = f"{company.id}_{safe_user}_{os.urandom(4).hex()}{ext}"
-    audio_path = static_dir / "audio" / audio_filename
-    with open(audio_path, "wb") as f:
+
+    # --- 1. Сохраняем исходный файл как есть (webm/ogg) ---
+    orig_ext = os.path.splitext(audio.filename or "")[1].lower()
+    if orig_ext not in [".ogg", ".oga", ".webm"]:
+        # по умолчанию считаем, что из браузера пришёл webm
+        orig_ext = ".webm"
+
+    orig_filename = f"{company.id}_{safe_user}_{os.urandom(4).hex()}{orig_ext}"
+    orig_path = static_dir / "audio" / orig_filename
+
+    with open(orig_path, "wb") as f:
         f.write(await audio.read())
 
-    raw_text = transcribe_audio_with_speechkit(str(audio_path))
+    # --- 2. Определяем путь к файлу, который пойдёт в SpeechKit ---
+    # если уже ogg — используем его; если webm — конвертируем в ogg
+    if orig_ext in [".ogg", ".oga"]:
+        ogg_path = orig_path
+    else:
+        ogg_filename = f"{company.id}_{safe_user}_{os.urandom(4).hex()}.ogg"
+        ogg_path = static_dir / "audio" / ogg_filename
+
+        # ffmpeg -y -i input.webm -ac 1 -ar 48000 -c:a libopus output.ogg
+        try:
+            subprocess.run(
+                [
+                    "/usr/bin/ffmpeg",  # полный путь к ffmpeg
+                    "-y",
+                    "-i",
+                    str(orig_path),
+                    "-ac",
+                    "1",
+                    "-ar",
+                    "48000",
+                    "-c:a",
+                    "libopus",
+                    str(ogg_path),
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            # если конвертация не удалась — логируем и кидаем 500
+            raise HTTPException(
+                status_code=500,
+                detail="Ошибка обработки аудио (ffmpeg). Попробуйте ещё раз или позже.",
+            )
+
+    # --- 3. Распознаём речь по ogg через SpeechKit ---
+    raw_text = transcribe_audio_with_speechkit(str(ogg_path))
     normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(raw_text)
 
+    # --- 4. Сохраняем отзыв (можно хранить путь к исходному файлу или к ogg) ---
     review = Review(
         company_id=company.id,
         user_name=user_name,
-        audio_path=str(audio_path),
+        audio_path=str(orig_path),  # исходник (webm или ogg) — для истории
         raw_text=raw_text,
         normalized_text=normalized_text,
         sentiment=sentiment,

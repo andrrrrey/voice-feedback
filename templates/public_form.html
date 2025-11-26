@@ -138,11 +138,11 @@
   </div>
 
   <script>
-    // Сервис висит под /voice-feedback, поэтому используем префикс:
     const BASE = '/voice-feedback';
     const companySlug = "{{ company.slug }}";
 
     let mediaRecorder;
+    let recorderMime;
     let audioChunks = [];
     let reviewId = null;
     let normalizedText = "";
@@ -170,9 +170,38 @@
 
     startBtn.onclick = async () => {
       audioChunks = [];
+    
+      let preferredMime = null;
+    
+      // 1. Пробуем ogg/opus (идеальный вариант для SpeechKit)
+      if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        preferredMime = 'audio/ogg;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
+        // иногда браузеры чувствительны к пробелам
+        preferredMime = 'audio/ogg; codecs=opus';
+      }
+    
+      // 2. Если ogg не поддерживается — пробуем webm/opus (часто так в Chrome)
+      if (!preferredMime) {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          preferredMime = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          preferredMime = 'audio/webm';
+        }
+      }
+    
+      // 3. Если ни один формат не подошёл — реально нет поддержки MediaRecorder
+      if (!preferredMime) {
+        recordStatus.textContent = "Ваш браузер не поддерживает запись аудио через MediaRecorder. Попробуйте другой браузер (Chrome/Edge/Firefox на компьютере).";
+        return;
+      }
+    
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+    
+        recorderMime = preferredMime;
+    
+        mediaRecorder = new MediaRecorder(stream, { mimeType: recorderMime });
         mediaRecorder.ondataavailable = (e) => {
           audioChunks.push(e.data);
         };
@@ -182,6 +211,7 @@
         startBtn.disabled = true;
         stopBtn.disabled = false;
       } catch (e) {
+        console.error(e);
         recordStatus.textContent = "Не удалось получить доступ к микрофону.";
       }
     };
@@ -196,27 +226,34 @@
     };
 
     async function onRecordStop() {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const blob = new Blob(audioChunks, { type: recorderMime || "audio/webm" });
       const formData = new FormData();
-      formData.append("audio", blob, "record.webm");
+    
+      const filename = (recorderMime && recorderMime.startsWith("audio/ogg"))
+        ? "record.ogg"
+        : "record.webm";
+    
+      formData.append("audio", blob, filename);
       formData.append("user_name", userNameInput.value || "");
-
+    
+      recordStatus.textContent = "Обработка записи...";
+    
       const res = await fetch(`${BASE}/api/public/${companySlug}/upload-audio`, {
         method: "POST",
         body: formData
       });
-
+    
       if (!res.ok) {
         recordStatus.textContent = "Ошибка при отправке аудио.";
         return;
       }
-
+    
       const data = await res.json();
       reviewId = data.review_id;
       normalizedText = data.normalized_text;
       aiText.textContent = data.normalized_text;
       sentimentSpan.textContent = data.sentiment;
-
+    
       recordStatus.textContent = "";
       showStep(2);
     }
