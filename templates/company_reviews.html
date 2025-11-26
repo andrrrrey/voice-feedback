@@ -37,10 +37,6 @@
   </style>
 </head>
 <body>
-  <div class="actions">
-    <a href="/voice-feedback/admin/login" class="secondary">⟵ К админке</a>
-    <a href="{{ '/voice-feedback/admin' }}" style="display:none"></a>
-  </div>
   <h1>Отзывы — {{ company.name }}</h1>
   <p class="muted">Собранные отзывы по компании. CSV можно скачать из основной панели.</p>
 
@@ -84,7 +80,6 @@
           <tr>
             <th>ID</th>
             <th>Имя</th>
-            <th>Статус</th>
             <th>Тональность</th>
             <th>Текст</th>
             <th>Создан</th>
@@ -97,7 +92,6 @@
         tr.innerHTML = `
           <td>${r.id}</td>
           <td>${r.user_name || '—'}</td>
-          <td>${r.status}</td>
           <td>${sentimentTag(r.sentiment)}</td>
           <td>${(r.normalized_text || '').replace(/</g, '&lt;')}</td>
           <td>${new Date(r.created_at).toLocaleString('ru-RU')}</td>
