@@ -130,6 +130,67 @@ def _build_gpt_prompt() -> str:
     )
 
 
+def _heuristic_sentiment_from_text(text: str) -> str:
+    """
+    Определяем тональность ТОЛЬКО по тексту, без учёта ответа модели.
+    Возвращает: 'positive', 'neutral' или 'negative'.
+    """
+    t = (text or "").lower()
+
+    negative_markers = [
+        "не понрав",          # "не понравились услуги", "не понравилось"
+        "ужасн",              # "ужасный", "ужасно"
+        "отврат",             # "отвратительно"
+        "кошмар",
+        "плохой", "плохая", "плохие", "плохо",
+        "медленн",            # "медленное обслуживание"
+        "разочарован", "разочарована", "разочарование",
+        "не рекоменд",        # "не рекомендую", "не рекомендовал"
+        "не советую",
+        "больше не приду",
+        "никогда больше",
+        "обман", "развод",
+        "хамств",
+        "наплевательск",      # "наплевательски"
+    ]
+
+    positive_markers = [
+        # убрали голое "понрав", чтобы не ловить "не понравилось"
+        "очень понравилось",
+        "мне понравилось",
+        "нам понравилось",
+        "понравилось обслуживание",
+        "отличн",
+        "прекрасн",
+        "замечательн",
+        "супер",
+        "классн",
+        "шикарн",
+        "доволен", "довольна",
+        "очень доволен", "очень довольна",
+        "рекомендую",
+        "советую",
+        "буду обращаться еще", "буду обращаться ещё",
+        "буду приходить еще", "буду приходить ещё",
+        "лучшая", "лучший сервис",
+        "спасибо", "благодар",
+        "всё понравилось", "все понравилось",
+    ]
+
+    has_neg = any(marker in t for marker in negative_markers)
+
+    # если явный негатив есть — он важнее всего
+    if has_neg:
+        return "negative"
+
+    has_pos = any(marker in t for marker in positive_markers)
+
+    if has_pos:
+        return "positive"
+
+    return "neutral"
+
+
 def _parse_gpt_response(text: str, fallback: str) -> Tuple[str, str]:
     try:
         data = json.loads(text)
@@ -181,8 +242,11 @@ def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
         text = payload["result"]["alternatives"][0]["message"]["text"]
     except (KeyError, IndexError):
         logger.warning("Неожиданный формат ответа YandexGPT: %s", payload)
-        return raw_text.strip(), "neutral"
+        normalized = raw_text.strip()
+        sentiment = _heuristic_sentiment_from_text(normalized)
+        return normalized, sentiment
 
-    normalized, sentiment = _parse_gpt_response(text, raw_text.strip())
+    normalized, _ = _parse_gpt_response(text, raw_text.strip())
+    sentiment = _heuristic_sentiment_from_text(normalized)
     return normalized, sentiment
     
