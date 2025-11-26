@@ -4,106 +4,157 @@
   <meta charset="UTF-8" />
   <title>Админ — панель</title>
   <style>
+    :root {
+      --bg: #f5f6fb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --muted: #6b7280;
+      --text: #0f172a;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+    }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 960px;
+      max-width: 1040px;
       margin: 0 auto;
-      padding: 24px;
-      background: #f5f5f7;
+      padding: 28px;
+      background: radial-gradient(circle at 0% 0%, #dbeafe 0, rgba(219,234,254,0) 35%),
+                  radial-gradient(circle at 85% 10%, #c7d2fe 0, rgba(199,210,254,0) 30%),
+                  var(--bg);
+      color: var(--text);
     }
     h1 {
-      margin-bottom: 16px;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
     }
     h2 {
-      margin-top: 24px;
-      margin-bottom: 8px;
+      margin-top: 0;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
     }
     .card {
-      background: #fff;
-      border-radius: 8px;
-      padding: 16px;
+      background: var(--card);
+      border-radius: 14px;
+      padding: 18px 18px 20px;
       margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      box-shadow: 0 10px 36px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.08);
     }
     label {
       display: block;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: #111827;
     }
     input[type="text"],
     input[type="email"] {
       width: 100%;
-      padding: 8px 10px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
       box-sizing: border-box;
-      margin-top: 4px;
+      margin-top: 6px;
+      background: linear-gradient(135deg, #f8fafc, #eef2ff);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      font-size: 14px;
+    }
+    input[type="text"]:focus,
+    input[type="email"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.16);
+      background: #fff;
     }
     button {
-      padding: 8px 14px;
-      border-radius: 4px;
+      padding: 10px 16px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
-      background: #2563eb;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
       color: #fff;
       font-size: 14px;
+      font-weight: 700;
+      transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.2);
     }
     button.secondary {
       background: #6b7280;
+      box-shadow: none;
     }
     button.danger {
       background: #dc2626;
-    }    
+      box-shadow: none;
+    }
     button.small {
-      padding: 4px 8px;
+      padding: 6px 10px;
       font-size: 12px;
     }
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.55;
       cursor: default;
+      box-shadow: none;
     }
+    button:hover:not(:disabled) { filter: brightness(1.03); transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); box-shadow: 0 8px 22px rgba(37, 99, 235, 0.22); }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 8px;
+      margin-top: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: inset 0 1px 0 #f3f4f6;
     }
     th, td {
-      padding: 6px 8px;
+      padding: 10px 12px;
       border-bottom: 1px solid #e5e7eb;
       font-size: 14px;
       vertical-align: top;
     }
     th {
       text-align: left;
-      background: #f9fafb;
+      background: #f8fafc;
+      color: #111827;
+      font-weight: 700;
     }
+    tbody tr:hover { background: #f9fafb; }
     .muted {
-      color: #6b7280;
+      color: var(--muted);
       font-size: 13px;
     }
     .status {
       font-size: 13px;
       margin-top: 4px;
+      color: var(--muted);
     }
     .tag {
       display: inline-block;
-      padding: 2px 6px;
+      padding: 3px 7px;
       border-radius: 999px;
-      background: #e5e7eb;
+      background: #e0e7ff;
       font-size: 11px;
-      margin-right: 4px;
+      margin-right: 6px;
+      color: #312e81;
+      font-weight: 600;
     }
     .row-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 4px;
+      gap: 6px;
+      margin-top: 6px;
     }
     .logo-preview {
-      max-height: 32px;
+      max-height: 36px;
     }
     .qr-preview {
-      max-height: 48px;
+      max-height: 56px;
       cursor: zoom-in;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 4px;
+      background: #fff;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
     }
     .flex {
       display: flex;
@@ -129,10 +180,10 @@
     }
     .modal-card {
       background: #fff;
-      padding: 16px;
-      border-radius: 12px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.16);
-      max-width: 420px;
+      padding: 18px;
+      border-radius: 14px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+      max-width: 440px;
       width: calc(100% - 24px);
       text-align: center;
     }
@@ -143,7 +194,7 @@
     .modal-card h3 {
       margin-top: 0;
       margin-bottom: 12px;
-    }    
+    }
   </style>
 </head>
 <body>
