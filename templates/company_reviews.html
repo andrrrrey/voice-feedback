@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Отзывы — {{ company.name }}</title>
   <style>
     body {
@@ -23,7 +24,8 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
       margin-top: 16px;
     }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .table-wrapper { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; min-width: 640px; }
     th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
     th { text-align: left; background: #f9fafb; }
     .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e5e7eb; font-size: 12px; }
@@ -34,6 +36,15 @@
     .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; background: #2563eb; color: #fff; }
     button.secondary { background: #6b7280; }
+
+    @media (max-width: 720px) {
+      body { padding: 16px; }
+      h1 { font-size: 22px; }
+      .card { padding: 14px; }
+      .actions { flex-direction: column; align-items: stretch; }
+      button { width: 100%; text-align: center; }
+      .table-wrapper { margin: 0 -6px; padding: 0 6px; }
+    }
   </style>
 </head>
 <body>
@@ -99,8 +110,12 @@
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-wrapper';
+      wrapper.appendChild(table);
+
       container.innerHTML = '';
-      container.appendChild(table);
+      container.appendChild(wrapper);
       const note = document.createElement('div');
       note.className = 'muted table-note';
       note.textContent = 'Для выгрузки CSV вернитесь и нажмите «CSV по компании» или общий экспорт.';

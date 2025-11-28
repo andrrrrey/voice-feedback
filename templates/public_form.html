@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Оставить голосовой отзыв — {{ company.name }}</title>
   <style>
     :root {
@@ -91,6 +92,18 @@
       margin-top: 8px;
     }
     .status { margin-top: 8px; font-size: 14px; color: var(--muted); }
+
+    @media (max-width: 640px) {
+      body { padding: 16px; }
+      .container { margin-bottom: 24px; }
+      .card { padding: 16px; }
+      h1 { font-size: 22px; line-height: 1.2; }
+      h2 { font-size: 18px; }
+      .logo { max-height: 72px; max-width: 100%; height: auto; }
+      .btn-row { flex-direction: column; align-items: stretch; }
+      .btn { width: 100%; text-align: center; }
+      textarea { min-height: 120px; }
+    }
   </style>
 </head>
 <body>
