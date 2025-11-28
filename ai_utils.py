@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from typing import Tuple
 
 import requests
@@ -16,45 +17,43 @@ YANDEX_SPEECHKIT_STT_URL = os.getenv(
 )
 YANDEX_SPEECHKIT_LANG = os.getenv("YANDEX_SPEECHKIT_LANG", "ru-RU")
 
-# 🔹 ДОБАВИЛ: формат аудио для STT (по умолчанию — oggopus)
+# 🔹 формат аудио для STT (по умолчанию — oggopus)
 YANDEX_SPEECHKIT_FORMAT = os.getenv("YANDEX_SPEECHKIT_FORMAT", "oggopus")
 
 YANDEX_GPT_URL = os.getenv(
     "YANDEX_GPT_URL",
     "https://llm.api.cloud.yandex.net/foundationModels/v1/completion",
 )
+
+# ⚠️ Модель можно сменить в .env, например на yandexgpt или yandexgpt-pro
 YANDEX_GPT_MODEL = os.getenv("YANDEX_GPT_MODEL", "yandexgpt-lite")
 
 # Промпты можно настраивать через переменные окружения
+
+# 🔹 Промпт для РЕРАЙТА/НОРМАЛИЗАЦИИ
 NORMALIZATION_PROMPT = os.getenv(
     "YANDEX_GPT_NORMALIZATION_PROMPT",
-    "Нормализуй текст отзыва: убери междометия, исправь опечатки и пунктуацию,"
-    " сохрани смысл. Верни только нормализованный текст.",
+    "Ты редактор клиентских отзывов.\n"
+    "Твоя задача — переписать отзыв так, чтобы он стал чище и понятнее.\n"
+    "Правила:\n"
+    "- сохраняй факты и исходное отношение автора (недовольство/довольство);\n"
+    "- убирай слова-паразиты, повторы, устные конструкции типа \"ну\", \"как бы\";\n"
+    "- исправляй опечатки и грамматику;\n"
+    "- расставляй знаки препинания, делай текст цельным и читаемым;\n"
+    "- можно немного уточнить или расширить формулировки, но не придумывай новых фактов.\n"
 )
+
+# 🔹 Промпт для ОЦЕНКИ ТОНАЛЬНОСТИ
 SENTIMENT_PROMPT = os.getenv(
     "YANDEX_GPT_SENTIMENT_PROMPT",
-    "Ты эксперт по анализу отзывов. Определи тональность текста как"
-    " positive, neutral или negative, опираясь на общий эмоциональный окрас и"
-    " оценочные суждения. Учитывай весь контекст, противопоставления (\"но\"," 
-    "\"однако\", \"зато\"), последовательность мыслей и финальный вывод"
-    " автора."
-    "\nПравила:\n"
-    "- negative: жалобы, неудовлетворённость, медленное/плохое обслуживание,"
-    " угрозы пожаловаться или не рекомендовать, даже если встречаются отдельные"
-    " положительные слова.\n"
-    "- positive: явная похвала, высокая оценка, готовность рекомендовать.\n"
-    "- neutral: описательная речь без явных оценок или когда позитивные и"
-    " негативные оценки в равновесии и автор не выражает итоговое недовольство"
-    " или восторг."
-    "\nПримеры:\n"
-    "\"Ужасная компания, сервис медленный, больше не приду\" -> negative\n"
-    "\"Сервис хороший, еда вкусная, рекомендую\" -> positive\n"
-    "\"Обычное кафе, средние цены, ничего особенного\" -> neutral\n"
-    "\"Были задержки, но в итоге всё сделали и я доволен\" -> positive\n"
-    "\"Есть пару плюсов, однако в целом остался недоволен и не рекомендую\""
-    " -> negative\n"
-    "Всегда выбирай метку, отражающую общий вывод автора, особенно финальную"
-    " оценку.",
+    "Теперь оцени общий тон отзыва и выбери одну метку:\n"
+    "- positive — явная похвала, удовлетворённость, готовность рекомендовать;\n"
+    "- neutral — описательный текст без явного недовольства или восторга;\n"
+    "- negative — жалобы, недовольство, плохой сервис, фразы вроде "
+    "\"не рекомендую\", \"больше не приду\".\n"
+    "Важно: если отзыв содержит серьёзные жалобы, медленное или плохое обслуживание, "
+    "угрозы не возвращаться или не рекомендовать — выбирай negative, "
+    "даже если встречаются отдельные положительные слова.\n"
 )
 
 logger = logging.getLogger(__name__)
@@ -80,8 +79,6 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
     if not YANDEX_FOLDER_ID:
         raise RuntimeError("YANDEX_FOLDER_ID не задан")
 
-    # 🔹 ДОБАВИЛ: явный формат, чтобы SpeechKit ждал oggopus,
-    # а не дефолтный ogg без уточнения.
     params = {
         "folderId": YANDEX_FOLDER_ID,
         "lang": YANDEX_SPEECHKIT_LANG,
@@ -100,7 +97,6 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
     )
 
     if response.status_code != 200:
-        # 🔹 Чуть более говорящий лог: статус + тело
         logger.error(
             "SpeechKit error (status=%s): %s",
             response.status_code,
@@ -121,12 +117,17 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
 
 
 def _build_gpt_prompt() -> str:
+    """
+    Строим единый промпт: сначала правила рерайта, затем правила тональности,
+    дальше — требование вернуть строгий JSON.
+    """
     return (
         f"{NORMALIZATION_PROMPT}\n\n"
-        f"{SENTIMENT_PROMPT}\n"
-        "Ответь строго в формате JSON: "
-        '{"normalized_text": "...", "sentiment": "positive|neutral|negative"}.\n'
-        "Не добавляй комментарии и пояснения."
+        f"{SENTIMENT_PROMPT}\n\n"
+        "Формат ответа:\n"
+        'Верни строго один JSON-объект без Markdown, без пояснений и без лишнего текста:\n'
+        '{"normalized_text": "...", "sentiment": "positive|neutral|negative"}\n'
+        "Никаких комментариев, вступлений и пояснений — только JSON."
     )
 
 
@@ -192,20 +193,46 @@ def _heuristic_sentiment_from_text(text: str) -> str:
 
 
 def _parse_gpt_response(text: str, fallback: str) -> Tuple[str, str]:
+    """
+    Парсим ответ модели. Ожидаем JSON, но на всякий случай:
+    - выдёргиваем первую фигурную скобку {...} из текста;
+    - если не получилось — возвращаем fallback + хьюристический sentiment.
+    """
+    raw = (text or "").strip()
+
     try:
-        data = json.loads(text)
+        # Пытаемся вытащить JSON-объект из текста
+        match = re.search(r"\{.*\}", raw, flags=re.S)
+        json_str = match.group(0) if match else raw
+
+        data = json.loads(json_str)
+
         normalized = (data.get("normalized_text") or fallback).strip()
-        sentiment = (data.get("sentiment") or "neutral").strip()
+        sentiment = (data.get("sentiment") or "").strip().lower()
+
+        if sentiment not in {"positive", "neutral", "negative"}:
+            sentiment = _heuristic_sentiment_from_text(normalized)
+
         return normalized, sentiment
-    except json.JSONDecodeError:
-        logger.warning("Не удалось разобрать ответ YandexGPT, возвращаем заглушку")
-        return fallback, "neutral"
+
+    except Exception as e:
+        logger.warning(
+            "Не удалось разобрать ответ YandexGPT как JSON: %r, ошибка: %s",
+            raw,
+            e,
+        )
+        normalized = fallback.strip()
+        sentiment = _heuristic_sentiment_from_text(normalized)
+        return normalized, sentiment
 
 
 def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
     """
-    Отправляет текст в YandexGPT для нормализации и определения тональности.
+    Отправляет текст в YandexGPT для нормализации (рерайта) и определения тональности.
     Возвращает (normalized_text, sentiment).
+
+    - normalized_text: переписанный отзыв без слов-паразитов, с пунктуацией;
+    - sentiment: 'positive', 'neutral' или 'negative'.
     """
     raw_text = raw_text or ""
 
@@ -216,11 +243,12 @@ def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
     headers.update(_auth_headers())
 
     model_uri = f"gpt://{YANDEX_FOLDER_ID}/{YANDEX_GPT_MODEL}"
+
     body = {
         "modelUri": model_uri,
         "completionOptions": {
             "stream": False,
-            "temperature": 0.2,
+            "temperature": 0.4,  # чуть свободнее, чтобы рерайт действительно переписывал
             "maxTokens": 800,
         },
         "messages": [
@@ -228,25 +256,41 @@ def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
                 "role": "system",
                 "text": _build_gpt_prompt(),
             },
-            {"role": "user", "text": raw_text},
+            {
+                "role": "user",
+                "text": raw_text,
+            },
         ],
+        # Просим модель вернуть именно JSON-объект
+        "json_object": True,
     }
 
-    response = requests.post(YANDEX_GPT_URL, headers=headers, json=body, timeout=30)
-    if response.status_code != 200:
-        logger.error("YandexGPT error: %s", response.text)
-        return raw_text.strip(), "neutral"
-
-    payload = response.json()
     try:
-        text = payload["result"]["alternatives"][0]["message"]["text"]
-    except (KeyError, IndexError):
-        logger.warning("Неожиданный формат ответа YandexGPT: %s", payload)
+        response = requests.post(
+            YANDEX_GPT_URL, headers=headers, json=body, timeout=30
+        )
+    except requests.RequestException as e:
+        logger.error("YandexGPT request error: %s", e)
         normalized = raw_text.strip()
         sentiment = _heuristic_sentiment_from_text(normalized)
         return normalized, sentiment
 
-    normalized, _ = _parse_gpt_response(text, raw_text.strip())
-    sentiment = _heuristic_sentiment_from_text(normalized)
+    if response.status_code != 200:
+        logger.error("YandexGPT error (status=%s): %s", response.status_code, response.text)
+        normalized = raw_text.strip()
+        sentiment = _heuristic_sentiment_from_text(normalized)
+        return normalized, sentiment
+
+    payload = response.json()
+    try:
+        text = payload["result"]["alternatives"][0]["message"]["text"]
+    except (KeyError, IndexError) as e:
+        logger.warning("Неожиданный формат ответа YandexGPT: %s (ошибка: %s)", payload, e)
+        normalized = raw_text.strip()
+        sentiment = _heuristic_sentiment_from_text(normalized)
+        return normalized, sentiment
+
+    # Здесь уже идёт полноценный рерайт + sentiment из JSON,
+    # с fallback на хьюристику, если JSON кривой.
+    normalized, sentiment = _parse_gpt_response(text, raw_text.strip())
     return normalized, sentiment
-    
