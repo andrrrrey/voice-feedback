@@ -108,12 +108,15 @@
 </head>
 <body>
   <div class="container">
+    {% if company.logo_path %}
+      {% set logo_src = company.logo_path %}
+      {% if logo_src.startswith('/') %}
+        {% set logo_src = '/voice-feedback' ~ logo_src %}
+      {% endif %}
+      <img src="{{ logo_src }}" alt="Логотип" class="logo">
+    {% endif %}      
     <h1>Отзыв для {{ company.name }}</h1>
     <p>Запишите короткий отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
-    {% if company.logo_path %}
-      <img src="{{ company.logo_path }}" alt="Логотип" class="logo">
-    {% endif %}
-
     <div class="card step active" id="step1">
       <h2>Шаг 1. Запишите голосовой отзыв</h2>
       <div class="input-group">
