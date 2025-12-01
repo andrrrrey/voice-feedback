@@ -60,6 +60,37 @@ def get_db():
 ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
+PROMPT_FILE = BASE_DIR / "normalization_prompt.txt"
+DEFAULT_NORMALIZATION_PROMPT = NORMALIZATION_PROMPT
+_cached_normalization_prompt: Optional[str] = None
+
+
+def load_normalization_prompt() -> str:
+    global _cached_normalization_prompt
+    if _cached_normalization_prompt is not None:
+        return _cached_normalization_prompt
+
+    if PROMPT_FILE.exists():
+        stored = PROMPT_FILE.read_text(encoding="utf-8").strip()
+        if stored:
+            _cached_normalization_prompt = stored
+            return _cached_normalization_prompt
+
+    _cached_normalization_prompt = DEFAULT_NORMALIZATION_PROMPT
+    return _cached_normalization_prompt
+
+
+def update_normalization_prompt(new_prompt: str) -> str:
+    global _cached_normalization_prompt
+    cleaned = (new_prompt or "").strip() or DEFAULT_NORMALIZATION_PROMPT
+    PROMPT_FILE.write_text(cleaned, encoding="utf-8")
+    _cached_normalization_prompt = cleaned
+    return _cached_normalization_prompt
+
+
+# прогреваем кэш, чтобы промпт был доступен сразу
+load_normalization_prompt()
+
 
 @app.get("/admin/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request):
@@ -77,7 +108,7 @@ async def admin_login(
             "admin_dashboard.html",
             {
                 "request": request,
-                "normalization_prompt": NORMALIZATION_PROMPT,
+                "normalization_prompt": load_normalization_prompt(),
             },
         )
         response.set_cookie("admin_auth", "1")
@@ -132,6 +163,17 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
     db.refresh(db_company)
 
     return db_company
+
+
+@app.get("/api/admin/prompt")
+def get_normalization_prompt():
+    return {"prompt": load_normalization_prompt()}
+
+
+@app.patch("/api/admin/prompt")
+def set_normalization_prompt(data: CompanyPromptUpdate):
+    updated_prompt = update_normalization_prompt(data.prompt)
+    return {"prompt": updated_prompt}
 
 
 @app.patch("/api/admin/companies/{company_id}/prompt", response_model=CompanyOut)
@@ -331,7 +373,7 @@ async def upload_audio(
     raw_text = transcribe_audio_with_speechkit(str(ogg_path))
     normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(
         raw_text,
-        normalization_prompt=company.prompt,
+        normalization_prompt=company.prompt or load_normalization_prompt(),
     )
 
     # --- 4. Сохраняем отзыв (можно хранить путь к исходному файлу или к ogg) ---

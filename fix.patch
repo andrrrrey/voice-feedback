@@ -1,46 +1,8 @@
 diff --git a/main.py b/main.py
-index 893aca023e984301de7be4772ec46e973433e94e..7a755edd5107219cfc54106f52de9bd3fe5493c7 100644
+index 7a755edd5107219cfc54106f52de9bd3fe5493c7..32a95811b0c70ffb9862735367ee7bb328b4ef1f 100644
 --- a/main.py
 +++ b/main.py
-@@ -1,45 +1,49 @@
- import os
- from pathlib import Path
- from typing import List, Optional
- import csv
- from io import StringIO
- import subprocess
- 
- from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPException, Response, status
- from fastapi.responses import HTMLResponse, StreamingResponse
- from fastapi.staticfiles import StaticFiles
- from fastapi.templating import Jinja2Templates
- from sqlalchemy import inspect, text
- from sqlalchemy.orm import Session
- import qrcode
- 
- from database import Base, engine, SessionLocal
- from models import Company, Review
- from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, ReviewOut, ReviewFinalizeIn
- from email_utils import send_review_email
--from ai_utils import transcribe_audio_with_speechkit, normalize_and_analyze_with_yandex_gpt
-+from ai_utils import (
-+    NORMALIZATION_PROMPT,
-+    normalize_and_analyze_with_yandex_gpt,
-+    transcribe_audio_with_speechkit,
-+)
- 
- # Инициализация БД
- Base.metadata.create_all(bind=engine)
- 
- # Мягкая миграция: добавляем колонку prompt в таблицу companies, если её нет
- with engine.connect() as conn:
-     inspector = inspect(conn)
-     columns = [col["name"] for col in inspector.get_columns("companies")]
-     if "prompt" not in columns:
-         conn.execute(text("ALTER TABLE companies ADD COLUMN prompt TEXT"))
- 
- app = FastAPI(title="Voice Feedback Service")
- 
+@@ -38,68 +38,99 @@ app = FastAPI(title="Voice Feedback Service")
  # Статика и шаблоны
  BASE_DIR = Path(__file__).resolve().parent
  static_dir = BASE_DIR / "static"
@@ -53,7 +15,9 @@ index 893aca023e984301de7be4772ec46e973433e94e..7a755edd5107219cfc54106f52de9bd3
  
  app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
  templates = Jinja2Templates(directory=str(templates_dir))
-@@ -49,51 +53,54 @@ def get_db():
+ 
+ 
+ def get_db():
      db = SessionLocal()
      try:
          yield db
@@ -64,6 +28,37 @@ index 893aca023e984301de7be4772ec46e973433e94e..7a755edd5107219cfc54106f52de9bd3
  ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
  ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
  
++PROMPT_FILE = BASE_DIR / "normalization_prompt.txt"
++DEFAULT_NORMALIZATION_PROMPT = NORMALIZATION_PROMPT
++_cached_normalization_prompt: Optional[str] = None
++
++
++def load_normalization_prompt() -> str:
++    global _cached_normalization_prompt
++    if _cached_normalization_prompt is not None:
++        return _cached_normalization_prompt
++
++    if PROMPT_FILE.exists():
++        stored = PROMPT_FILE.read_text(encoding="utf-8").strip()
++        if stored:
++            _cached_normalization_prompt = stored
++            return _cached_normalization_prompt
++
++    _cached_normalization_prompt = DEFAULT_NORMALIZATION_PROMPT
++    return _cached_normalization_prompt
++
++
++def update_normalization_prompt(new_prompt: str) -> str:
++    global _cached_normalization_prompt
++    cleaned = (new_prompt or "").strip() or DEFAULT_NORMALIZATION_PROMPT
++    PROMPT_FILE.write_text(cleaned, encoding="utf-8")
++    _cached_normalization_prompt = cleaned
++    return _cached_normalization_prompt
++
++
++# прогреваем кэш, чтобы промпт был доступен сразу
++load_normalization_prompt()
++
  
  @app.get("/admin/login", response_class=HTMLResponse)
  async def admin_login_page(request: Request):
@@ -79,11 +74,11 @@ index 893aca023e984301de7be4772ec46e973433e94e..7a755edd5107219cfc54106f52de9bd3
      if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
          response = templates.TemplateResponse(
              "admin_dashboard.html",
--            {"request": request}
-+            {
-+                "request": request,
-+                "normalization_prompt": NORMALIZATION_PROMPT,
-+            },
+             {
+                 "request": request,
+-                "normalization_prompt": NORMALIZATION_PROMPT,
++                "normalization_prompt": load_normalization_prompt(),
+             },
          )
          response.set_cookie("admin_auth", "1")
          return response
@@ -108,17 +103,126 @@ index 893aca023e984301de7be4772ec46e973433e94e..7a755edd5107219cfc54106f52de9bd3
      return templates.TemplateResponse(
          "company_reviews.html",
          {"request": request, "company": company},
+@@ -112,50 +143,61 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
+     if existing:
+         raise HTTPException(status_code=400, detail="Slug already in use")
+ 
+     db_company = Company(
+         name=company.name,
+         slug=company.slug,
+         email=company.email,
+         prompt=None,
      )
-diff --git a/templates/admin_dashboard.html b/templates/admin_dashboard.html
-index d25b0ded811149b8a49a2d4d295153cea04d764d..b8350ee641c105a5df509f9767cd3acc5ee875c0 100644
---- a/templates/admin_dashboard.html
-+++ b/templates/admin_dashboard.html
-@@ -203,50 +203,58 @@
-     .modal-card h3 {
-       margin-top: 0;
-       margin-bottom: 12px;
+     db.add(db_company)
+     db.commit()
+     db.refresh(db_company)
+ 
+ # Генерация QR-кода на публичную форму
+     public_url = f"https://dev.futuguru.com/voice-feedback/r/{db_company.slug}"
+     qr_img = qrcode.make(public_url)
+     qr_path = static_dir / "qr" / f"{db_company.slug}.png"
+     qr_img.save(qr_path)
+     db_company.qr_path = f"/static/qr/{db_company.slug}.png"
+     db.commit()
+     db.refresh(db_company)
+ 
+     return db_company
+ 
+ 
++@app.get("/api/admin/prompt")
++def get_normalization_prompt():
++    return {"prompt": load_normalization_prompt()}
++
++
++@app.patch("/api/admin/prompt")
++def set_normalization_prompt(data: CompanyPromptUpdate):
++    updated_prompt = update_normalization_prompt(data.prompt)
++    return {"prompt": updated_prompt}
++
++
+ @app.patch("/api/admin/companies/{company_id}/prompt", response_model=CompanyOut)
+ def update_company_prompt(
+     company_id: int,
+     data: CompanyPromptUpdate,
+     db: Session = Depends(get_db),
+ ):
+     company = db.query(Company).get(company_id)
+     if not company:
+         raise HTTPException(status_code=404, detail="Company not found")
+ 
+     company.prompt = data.prompt.strip()
+     db.commit()
+     db.refresh(company)
+     return company
+ 
+ 
+ @app.get("/api/admin/companies", response_model=List[CompanyOut])
+ def list_companies(db: Session = Depends(get_db)):
+     companies = db.query(Company).all()
+     return companies
+ 
+ 
+ @app.delete("/api/admin/companies/{company_id}")
+ def delete_company(company_id: int, db: Session = Depends(get_db)):
+     company = db.query(Company).get(company_id)
+@@ -309,51 +351,51 @@ async def upload_audio(
+                     "-i",
+                     str(orig_path),
+                     "-ac",
+                     "1",
+                     "-ar",
+                     "48000",
+                     "-c:a",
+                     "libopus",
+                     str(ogg_path),
+                 ],
+                 check=True,
+                 stdout=subprocess.DEVNULL,
+                 stderr=subprocess.DEVNULL,
+             )
+         except subprocess.CalledProcessError:
+             # если конвертация не удалась — логируем и кидаем 500
+             raise HTTPException(
+                 status_code=500,
+                 detail="Ошибка обработки аудио (ffmpeg). Попробуйте ещё раз или позже.",
+             )
+ 
+     # --- 3. Распознаём речь по ogg через SpeechKit ---
+     raw_text = transcribe_audio_with_speechkit(str(ogg_path))
+     normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(
+         raw_text,
+-        normalization_prompt=company.prompt,
++        normalization_prompt=company.prompt or load_normalization_prompt(),
+     )
+ 
+     # --- 4. Сохраняем отзыв (можно хранить путь к исходному файлу или к ogg) ---
+     review = Review(
+         company_id=company.id,
+         user_name=user_name,
+         audio_path=str(orig_path),  # исходник (webm или ogg) — для истории
+         raw_text=raw_text,
+         normalized_text=normalized_text,
+         sentiment=sentiment,
+         status="draft",
+     )
+     db.add(review)
+     db.commit()
+     db.refresh(review)
+ 
+     return {
+         "review_id": review.id,
+         "raw_text": raw_text,
+         "normalized_text": normalized_text,
+         "sentiment": sentiment,
      }
  
+ 
+ @app.post("/api/public/reviews/{review_id}/finalize")
+diff --git a/templates/admin_dashboard.html b/templates/admin_dashboard.html
+index b8350ee641c105a5df509f9767cd3acc5ee875c0..d5d8d89e2d31b3b5d59ce07c56b079b0a9cf69dc 100644
+--- a/templates/admin_dashboard.html
++++ b/templates/admin_dashboard.html
+@@ -208,51 +208,55 @@
      @media (max-width: 900px) {
        body { padding: 20px; }
        h1 { font-size: 24px; }
@@ -139,14 +243,19 @@ index d25b0ded811149b8a49a2d4d295153cea04d764d..b8350ee641c105a5df509f9767cd3acc
      Здесь можно создавать компании, получать ссылки/QR-коды и работать с отзывами.
    </p>
  
-+  <div class="card">
-+    <h2>Промпт для нейросети</h2>
-+    <p class="muted" style="margin-top: -4px;">
-+      Используется по умолчанию для всех компаний.
-+    </p>
-+    <textarea rows="9" readonly>{{ normalization_prompt }}</textarea>
-+  </div>
-+
+   <div class="card">
+     <h2>Промпт для нейросети</h2>
+     <p class="muted" style="margin-top: -4px;">
+       Используется по умолчанию для всех компаний.
+     </p>
+-    <textarea rows="9" readonly>{{ normalization_prompt }}</textarea>
++    <textarea id="normalizationPrompt" rows="9">{{ normalization_prompt }}</textarea>
++    <div class="flex" style="margin-top: 10px;">
++      <button id="savePrompt" type="button">Сохранить</button>
++      <span id="promptStatus" class="status"></span>
++    </div>
+   </div>
+ 
    <!-- Блок создания компании -->
    <div class="card">
      <h2>Создать компанию</h2>
@@ -170,155 +279,112 @@ index d25b0ded811149b8a49a2d4d295153cea04d764d..b8350ee641c105a5df509f9767cd3acc
  
    <!-- Список компаний -->
    <div class="card">
-     <div class="flex">
-       <h2 style="margin-bottom: 0;">Компании</h2>
-@@ -367,77 +375,60 @@
+@@ -273,50 +277,54 @@
+       Скачать все отзывы (CSV)
+     </button>
+     <span class="muted" style="margin-left: 8px;">или скачай по компании из таблицы.</span>
+   </div>
  
-         // Загрузка логотипа
-         const logoInputId = `logo-input-${c.id}`;
-         const logoBlock = document.createElement('div');
-         logoBlock.innerHTML = `
-           <input type="file" id="${logoInputId}" accept="image/*" style="max-width:160px; font-size:12px; margin-bottom:4px;">
-           <button class="small secondary" type="button">Загрузить</button>
-         `;
-         const uploadBtn = logoBlock.querySelector('button');
-         uploadBtn.onclick = () => uploadLogo(c.id, logoInputId);
+   <div id="qrModal" class="modal-backdrop">
+     <div class="modal-card">
+       <h3>QR-код</h3>
+       <img id="qrModalImg" src="" alt="QR код">
+       <div style="margin-top: 12px;">
+         <button id="closeQrModal" class="secondary small" type="button">Закрыть</button>
+       </div>
+     </div>
+   </div>
+   
+   <script>
+     // Важно: сервис висит под /voice-feedback/, поэтому префикс:
+     const BASE = '/voice-feedback';
  
-         // CSV по компании
-         const csvBtn = document.createElement('button');
-         csvBtn.type = 'button';
-         csvBtn.className = 'small secondary';
-         csvBtn.textContent = 'CSV по компании';
-         csvBtn.onclick = () => downloadCsvForCompany(c.id);
+     const createForm = document.getElementById('createCompanyForm');
+     const nameInput = document.getElementById('companyName');
+     const slugInput = document.getElementById('companySlug');
+     const emailInput = document.getElementById('companyEmail');
+     const createStatus = document.getElementById('createStatus');
  
-         // Отзывы
-         const reviewsBtn = document.createElement('button');
-         reviewsBtn.type = 'button';
-         reviewsBtn.className = 'small';
-         reviewsBtn.textContent = 'Отзывы';
-         reviewsBtn.onclick = () => openReviewsPage(c.id);
- 
--        // Промпт для нейросети
--        const promptAreaId = `prompt-${c.id}`;
--        const promptStatusId = `prompt-status-${c.id}`;
--        const promptBlock = document.createElement('div');
--        promptBlock.style.width = '100%';
--        promptBlock.innerHTML = `
--          <label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Промпт для нейросети</label>
--          <textarea id="${promptAreaId}" rows="4" placeholder="Если оставить пустым, будет использоваться промпт по умолчанию">${c.prompt || ''}</textarea>
--          <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap: wrap;">
--            <button class="small" type="button">Сохранить промпт</button>
--            <span id="${promptStatusId}" class="status"></span>
--          </div>
--        `;
--        const promptBtn = promptBlock.querySelector('button');
--        promptBtn.onclick = () => savePrompt(c.id, promptAreaId, promptStatusId);
--
-         // Удаление
-         const deleteBtn = document.createElement('button');
-         deleteBtn.type = 'button';
-         deleteBtn.className = 'small danger';
-         deleteBtn.textContent = 'Удалить';
-         deleteBtn.onclick = () => deleteCompany(c.id, c.name);
--        
++    const promptTextarea = document.getElementById('normalizationPrompt');
++    const savePromptBtn = document.getElementById('savePrompt');
++    const promptStatus = document.getElementById('promptStatus');
 +
-         actions.appendChild(logoBlock);
-         actions.appendChild(csvBtn);
-         actions.appendChild(reviewsBtn);
--        actions.appendChild(promptBlock);
-         actions.appendChild(deleteBtn);
-         tdActions.appendChild(actions);
+     const companiesContainer = document.getElementById('companiesContainer');
+     const refreshBtn = document.getElementById('refreshCompanies');
+     const downloadAllCsvBtn = document.getElementById('downloadAllCsv');
  
-         tr.appendChild(tdActions);
+     let companies = [];
  
-         tbody.appendChild(tr);
-       });
- 
-       table.appendChild(tbody);
- 
-       const wrapper = document.createElement('div');
-       wrapper.className = 'table-wrapper';
-       wrapper.appendChild(table);
- 
-       companiesContainer.innerHTML = '';
-       companiesContainer.appendChild(wrapper);
- 
-       document.querySelectorAll('[data-qr]').forEach((img) => {
-         img.addEventListener('click', () => openQrModal(img.dataset.qr));
-       });
-     }
- 
-     function openQrModal(qrUrl) {
-       const modal = document.getElementById('qrModal');
-       const img = document.getElementById('qrModalImg');
-@@ -468,70 +459,50 @@
-           body: fd,
-         });
-         if (!res.ok) throw new Error('Ошибка загрузки логотипа');
-         await res.json();
-         await loadCompanies();
-       } catch (e) {
-         alert('Не удалось загрузить логотип');
-         console.error(e);
-       }
-     }
- 
-     async function deleteCompany(companyId, companyName) {
-       if (!confirm(`Удалить компанию "${companyName}" со всеми отзывами?`)) return;
+     async function loadCompanies() {
+       companiesContainer.textContent = 'Загрузка...';
        try {
-         const res = await fetch(`${BASE}/api/admin/companies/${companyId}`, {
-           method: 'DELETE',
-         });
-         if (!res.ok) throw new Error('Ошибка удаления');
-         await loadCompanies();
+         const res = await fetch(`${BASE}/api/admin/companies`);
+         if (!res.ok) throw new Error('Ошибка загрузки компаний');
+         companies = await res.json();
+         renderCompanies();
        } catch (e) {
-         alert('Не удалось удалить компанию');
+         companiesContainer.textContent = 'Не удалось загрузить список компаний.';
          console.error(e);
        }
      }
  
--    async function savePrompt(companyId, textareaId, statusId) {
--      const textarea = document.getElementById(textareaId);
--      const statusEl = document.getElementById(statusId);
--      statusEl.textContent = 'Сохранение...';
--
--      try {
--        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/prompt`, {
--          method: 'PATCH',
--          headers: { 'Content-Type': 'application/json' },
--          body: JSON.stringify({ prompt: textarea.value || '' }),
--        });
--        if (!res.ok) throw new Error('Ошибка сохранения');
--        await res.json();
--        statusEl.textContent = 'Сохранено';
--      } catch (e) {
--        console.error(e);
--        statusEl.textContent = 'Не удалось сохранить';
--      }
--    }
--    
-     function downloadCsvForCompany(companyId) {
-       const url = `${BASE}/api/admin/reviews/export?company_id=${companyId}`;
-       window.open(url, '_blank');
-     }
- 
-     function openReviewsPage(companyId) {
-       window.location.href = `${BASE}/admin/companies/${companyId}/reviews`;
-     }
-     
-     // Создание компании
-     createForm.onsubmit = async (e) => {
-       e.preventDefault();
-       createStatus.textContent = '';
-       const payload = {
-         name: nameInput.value.trim(),
-         slug: slugInput.value.trim(),
-         email: emailInput.value.trim(),
-       };
-       if (!payload.name || !payload.slug || !payload.email) {
-         createStatus.textContent = 'Заполните все поля.';
+     function renderCompanies() {
+       if (!companies.length) {
+         companiesContainer.textContent = 'Компаний пока нет.';
          return;
        }
-       try {
-         const res = await fetch(`${BASE}/api/admin/companies`, {
-           method: 'POST',
+ 
+@@ -518,31 +526,52 @@
+         await res.json();
+         createStatus.textContent = 'Компания создана.';
+         nameInput.value = '';
+         slugInput.value = '';
+         emailInput.value = '';
+         await loadCompanies();
+       } catch (e) {
+         console.error(e);
+         createStatus.textContent = 'Ошибка сети при создании компании.';
+       }
+     };
+ 
+     refreshBtn.onclick = () => loadCompanies();
+ 
+     downloadAllCsvBtn.onclick = () => {
+       const url = `${BASE}/api/admin/reviews/export`;
+       window.open(url, '_blank');
+     };
+ 
+     document.getElementById('closeQrModal').onclick = closeQrModal;
+     document.getElementById('qrModal').addEventListener('click', (e) => {
+       if (e.target.id === 'qrModal') {
+         closeQrModal();
+       }
+     });
+-    
++
++    savePromptBtn.onclick = async () => {
++      promptStatus.textContent = '';
++      savePromptBtn.disabled = true;
++      try {
++        const res = await fetch(`${BASE}/api/admin/prompt`, {
++          method: 'PATCH',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({ prompt: promptTextarea.value })
++        });
++        if (!res.ok) throw new Error('Ошибка сохранения промпта');
++        const data = await res.json();
++        promptTextarea.value = data.prompt || '';
++        promptStatus.textContent = 'Сохранено';
++      } catch (e) {
++        console.error(e);
++        promptStatus.textContent = 'Не удалось сохранить промпт';
++      } finally {
++        savePromptBtn.disabled = false;
++      }
++    };
++
+     // начальная загрузка
+     loadCompanies();
+   </script>
+ </body>
+ </html>

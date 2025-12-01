@@ -230,7 +230,11 @@
     <p class="muted" style="margin-top: -4px;">
       Используется по умолчанию для всех компаний.
     </p>
-    <textarea rows="9" readonly>{{ normalization_prompt }}</textarea>
+    <textarea id="normalizationPrompt" rows="9">{{ normalization_prompt }}</textarea>
+    <div class="flex" style="margin-top: 10px;">
+      <button id="savePrompt" type="button">Сохранить</button>
+      <span id="promptStatus" class="status"></span>
+    </div>
   </div>
 
   <!-- Блок создания компании -->
@@ -294,6 +298,10 @@
     const slugInput = document.getElementById('companySlug');
     const emailInput = document.getElementById('companyEmail');
     const createStatus = document.getElementById('createStatus');
+
+    const promptTextarea = document.getElementById('normalizationPrompt');
+    const savePromptBtn = document.getElementById('savePrompt');
+    const promptStatus = document.getElementById('promptStatus');
 
     const companiesContainer = document.getElementById('companiesContainer');
     const refreshBtn = document.getElementById('refreshCompanies');
@@ -540,7 +548,28 @@
         closeQrModal();
       }
     });
-    
+
+    savePromptBtn.onclick = async () => {
+      promptStatus.textContent = '';
+      savePromptBtn.disabled = true;
+      try {
+        const res = await fetch(`${BASE}/api/admin/prompt`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: promptTextarea.value })
+        });
+        if (!res.ok) throw new Error('Ошибка сохранения промпта');
+        const data = await res.json();
+        promptTextarea.value = data.prompt || '';
+        promptStatus.textContent = 'Сохранено';
+      } catch (e) {
+        console.error(e);
+        promptStatus.textContent = 'Не удалось сохранить промпт';
+      } finally {
+        savePromptBtn.disabled = false;
+      }
+    };
+
     // начальная загрузка
     loadCompanies();
   </script>
