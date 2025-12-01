@@ -1,540 +1,331 @@
-diff --git a/templates/admin_dashboard.html b/templates/admin_dashboard.html
-index a7d2f7da83b3a272076f5f9909c9c01b61b5c8bf..73680edcb036bc77e737635eb92d5d01f79bae62 100644
---- a/templates/admin_dashboard.html
-+++ b/templates/admin_dashboard.html
-@@ -1,29 +1,30 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8" />
-+  <meta name="viewport" content="width=device-width, initial-scale=1" />
-   <title>Админ — панель</title>
-   <style>
-     :root {
-       --bg: #f5f6fb;
-       --card: #ffffff;
-       --border: #e5e7eb;
-       --muted: #6b7280;
-       --text: #0f172a;
-       --primary: #2563eb;
-       --primary-hover: #1d4ed8;
-     }
-     body {
-       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-       max-width: 1040px;
-       margin: 0 auto;
-       padding: 28px;
-       background: radial-gradient(circle at 0% 0%, #dbeafe 0, rgba(219,234,254,0) 35%),
-                   radial-gradient(circle at 85% 10%, #c7d2fe 0, rgba(199,210,254,0) 30%),
-                   var(--bg);
-       color: var(--text);
-     }
-     h1 {
-       margin-bottom: 8px;
-       letter-spacing: -0.01em;
-     }
-@@ -84,50 +85,56 @@
-     button.danger {
-       background: #dc2626;
-       box-shadow: none;
-     }
-     button.small {
-       padding: 6px 10px;
-       font-size: 12px;
-     }
-     button:disabled {
-       opacity: 0.55;
-       cursor: default;
-       box-shadow: none;
-     }
-     button:hover:not(:disabled) { filter: brightness(1.03); transform: translateY(-1px); }
-     button:active:not(:disabled) { transform: translateY(0); box-shadow: 0 8px 22px rgba(37, 99, 235, 0.22); }
-     table {
-       width: 100%;
-       border-collapse: collapse;
-       margin-top: 12px;
-       border: 1px solid #e5e7eb;
-       border-radius: 12px;
-       overflow: hidden;
-       background: #fff;
-       box-shadow: inset 0 1px 0 #f3f4f6;
-     }
-+    .table-wrapper {
-+      width: 100%;
-+      overflow-x: auto;
-+      border-radius: 12px;
-+    }
-+    .table-wrapper table { min-width: 720px; }
-     th, td {
-       padding: 10px 12px;
-       border-bottom: 1px solid #e5e7eb;
-       font-size: 14px;
-       vertical-align: top;
-     }
-     th {
-       text-align: left;
-       background: #f8fafc;
-       color: #111827;
-       font-weight: 700;
-     }
-     tbody tr:hover { background: #f9fafb; }
-     .muted {
-       color: var(--muted);
-       font-size: 13px;
-     }
-     .status {
-       font-size: 13px;
-       margin-top: 4px;
-       color: var(--muted);
-     }
-     .tag {
-       display: inline-block;
-       padding: 3px 7px;
-@@ -173,50 +180,63 @@
-       opacity: 0;
-       pointer-events: none;
-       transition: opacity 0.2s ease;
-     }
-     .modal-backdrop.active {
-       opacity: 1;
-       pointer-events: all;
-     }
-     .modal-card {
-       background: #fff;
-       padding: 18px;
-       border-radius: 14px;
-       box-shadow: 0 16px 48px rgba(0,0,0,0.18);
-       max-width: 440px;
-       width: calc(100% - 24px);
-       text-align: center;
-     }
-     .modal-card img {
-       max-width: 100%;
-       height: auto;
-     }
-     .modal-card h3 {
-       margin-top: 0;
-       margin-bottom: 12px;
-     }
-+
-+    @media (max-width: 900px) {
-+      body { padding: 20px; }
-+      h1 { font-size: 24px; }
-+      h2 { font-size: 18px; }
-+      .card { padding: 16px; }
-+      .flex { flex-direction: column; align-items: flex-start; }
-+      .row-actions { flex-direction: column; align-items: stretch; }
-+      .row-actions button { width: 100%; }
-+      .row-actions input { width: 100%; }
-+      .table-wrapper { margin: 0 -6px; padding: 0 6px; }
-+      table { min-width: 640px; }
-+    }
-   </style>
- </head>
- <body>
-   <h1>Админ-панель Voice Feedback</h1>
-   <p class="muted">
-     Здесь можно создавать компании, получать ссылки/QR-коды и работать с отзывами.
-   </p>
- 
-   <!-- Блок создания компании -->
-   <div class="card">
-     <h2>Создать компанию</h2>
-     <form id="createCompanyForm">
-       <label>
-         Название компании
-         <input type="text" id="companyName" required />
-       </label>
-       <label>
-         Slug (для URL, латиница, без пробелов, например <code>beauty-salon-lux</code>)
-         <input type="text" id="companySlug" required />
-       </label>
-       <label>
-         Email (куда отправлять отзывы)
-         <input type="email" id="companyEmail" required />
-       </label>
-       <button type="submit">Создать компанию</button>
-@@ -365,52 +385,56 @@
-         reviewsBtn.type = 'button';
-         reviewsBtn.className = 'small';
-         reviewsBtn.textContent = 'Отзывы';
-         reviewsBtn.onclick = () => openReviewsPage(c.id);
- 
-         // Удаление
-         const deleteBtn = document.createElement('button');
-         deleteBtn.type = 'button';
-         deleteBtn.className = 'small danger';
-         deleteBtn.textContent = 'Удалить';
-         deleteBtn.onclick = () => deleteCompany(c.id, c.name);
-         
-         actions.appendChild(logoBlock);
-         actions.appendChild(csvBtn);
-         actions.appendChild(reviewsBtn);
-         actions.appendChild(deleteBtn);
-         tdActions.appendChild(actions);
- 
-         tr.appendChild(tdActions);
- 
-         tbody.appendChild(tr);
-       });
- 
-       table.appendChild(tbody);
- 
-+      const wrapper = document.createElement('div');
-+      wrapper.className = 'table-wrapper';
-+      wrapper.appendChild(table);
-+
-       companiesContainer.innerHTML = '';
--      companiesContainer.appendChild(table);
-+      companiesContainer.appendChild(wrapper);
- 
-       document.querySelectorAll('[data-qr]').forEach((img) => {
-         img.addEventListener('click', () => openQrModal(img.dataset.qr));
-       });
-     }
- 
-     function openQrModal(qrUrl) {
-       const modal = document.getElementById('qrModal');
-       const img = document.getElementById('qrModalImg');
-       img.src = qrUrl;
-       modal.classList.add('active');
-     }
- 
-     function closeQrModal() {
-       const modal = document.getElementById('qrModal');
-       const img = document.getElementById('qrModalImg');
-       img.src = '';
-       modal.classList.remove('active');
-     }
- 
-     async function uploadLogo(companyId, inputId) {
-       const input = document.getElementById(inputId);
-       if (!input.files.length) {
-         alert('Выберите файл логотипа');
-         return;
-diff --git a/templates/admin_login.html b/templates/admin_login.html
-index 81a435044b2838cf125c6a1c55b01ab0236c7b8b..cf64d08452469114d37889ca8673b5ce5e9c9538 100644
---- a/templates/admin_login.html
-+++ b/templates/admin_login.html
-@@ -1,29 +1,30 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8">
-+  <meta name="viewport" content="width=device-width, initial-scale=1">
-   <title>Админ — вход</title>
-   <style>
-     :root {
-       color-scheme: light;
-       --bg: #f4f6fb;
-       --card: rgba(255, 255, 255, 0.92);
-       --text: #0f172a;
-       --muted: #6b7280;
-       --primary: #2563eb;
-       --primary-hover: #1d4ed8;
-       --border: #e5e7eb;
-       --shadow: 0 20px 70px rgba(37, 99, 235, 0.18);
-     }
-     body {
-       margin: 0;
-       min-height: 100vh;
-       display: flex;
-       align-items: center;
-       justify-content: center;
-       background: linear-gradient(135deg, #e0e7ff 0%, #f4f6fb 55%, #e5edff 100%);
-       font-family: system-ui, -apple-system, "Inter", sans-serif;
-       color: var(--text);
-       padding: 18px;
-       box-sizing: border-box;
-     }
-@@ -102,50 +103,56 @@
-     .error {
-       color: #b91c1c;
-       background: #fef2f2;
-       border: 1px solid #fecaca;
-       padding: 12px 14px;
-       border-radius: 12px;
-       font-size: 14px;
-       margin-bottom: 14px;
-       box-shadow: 0 6px 18px rgba(185, 28, 28, 0.06);
-     }
-     button {
-       width: 100%;
-       padding: 13px 16px;
-       border: none;
-       border-radius: 12px;
-       background: linear-gradient(135deg, #2563eb, #1d4ed8);
-       color: #fff;
-       font-size: 15px;
-       font-weight: 700;
-       cursor: pointer;
-       box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
-       transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
-     }
-     button:hover { filter: brightness(1.04); transform: translateY(-1px); }
-     button:active { transform: translateY(0); box-shadow: 0 10px 22px rgba(37, 99, 235, 0.26); }
-+
-+    @media (max-width: 480px) {
-+      .card { padding: 24px 20px; }
-+      h1 { font-size: 22px; }
-+      .subtitle { font-size: 13px; }
-+    }
-   </style>
- </head>
- <body>
-   <div class="card">
-     <div class="eyebrow">Voice Feedback • Admin</div>
-     <h1>Вход в админ-панель</h1>
-     <p class="subtitle">Управляйте компаниями и отслеживайте отзывы в одном месте.</p>
-     {% if error %}
-       <div class="error">{{ error }}</div>
-     {% endif %}
-     <form method="post">
-       <div class="field">
-         <label for="login">Логин</label>
-         <div class="input-shell">
-           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-             <path d="M12 12c2.761 0 5-2.462 5-5.5S14.761 1 12 1 7 3.462 7 6.5 9.239 12 12 12ZM4 22c0-3.59 3.134-6.5 7-6.5s7 2.91 7 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-           </svg>
-           <input id="login" type="text" name="login" placeholder="admin" required>
-         </div>
+diff --git a/templates/public_form.html b/templates/public_form.html
+index 4aea8262cb0e65c4dfd0c462a53031f7a7acc729..4bd62bbd763017e3b3491b27a5f045fa2c931303 100644
+--- a/templates/public_form.html
++++ b/templates/public_form.html
+@@ -138,164 +138,288 @@
+       <div class="info-box" id="aiText"></div>
+       <div class="btn-row">
+         <button id="editBtn" class="btn" type="button">Редактировать и отправить</button>
+         <button class="btn secondary" type="button" onclick="showStep(1)">Записать ещё раз</button>
        </div>
-       <div class="field">
-         <label for="password">Пароль</label>
-         <div class="input-shell">
-           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-             <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/>
-diff --git a/templates/company_reviews.html b/templates/company_reviews.html
-index 380e29774dc1cd67fc58343a71369d71e0836bd1..0512def27355b589a586588da7e26f36ddea5aa1 100644
---- a/templates/company_reviews.html
-+++ b/templates/company_reviews.html
-@@ -1,61 +1,72 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8">
-+  <meta name="viewport" content="width=device-width, initial-scale=1">
-   <title>Отзывы — {{ company.name }}</title>
-   <style>
-     body {
-       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-       max-width: 960px;
-       margin: 0 auto;
-       padding: 24px;
-       background: #f5f5f7;
-       color: #0f172a;
-     }
-     a { color: #2563eb; text-decoration: none; }
-     a:hover { text-decoration: underline; }
-     h1 { margin-bottom: 6px; }
-     .muted { color: #6b7280; font-size: 14px; }
-     .card {
-       background: #fff;
-       border-radius: 10px;
-       padding: 16px;
-       box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-       margin-top: 16px;
-     }
--    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-+    .table-wrapper { width: 100%; overflow-x: auto; }
-+    table { width: 100%; border-collapse: collapse; margin-top: 12px; min-width: 640px; }
-     th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-     th { text-align: left; background: #f9fafb; }
-     .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e5e7eb; font-size: 12px; }
-     .tag.positive { background: #d1fae5; color: #065f46; }
-     .tag.negative { background: #fee2e2; color: #991b1b; }
-     .tag.neutral { background: #e5e7eb; color: #374151; }
-     .table-note { margin-top: 8px; }
-     .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-     button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; background: #2563eb; color: #fff; }
-     button.secondary { background: #6b7280; }
-+
-+    @media (max-width: 720px) {
-+      body { padding: 16px; }
-+      h1 { font-size: 22px; }
-+      .card { padding: 14px; }
-+      .actions { flex-direction: column; align-items: stretch; }
-+      button { width: 100%; text-align: center; }
-+      .table-wrapper { margin: 0 -6px; padding: 0 6px; }
-+    }
-   </style>
- </head>
- <body>
-   <h1>Отзывы — {{ company.name }}</h1>
-   <p class="muted">Собранные отзывы по компании. CSV можно скачать из основной панели.</p>
- 
-   <div class="card">
-     <div class="actions">
-       <span class="muted">Slug: {{ company.slug }}</span>
-       <button id="refreshBtn" class="secondary" type="button">Обновить</button>
-       <button id="backBtn" class="secondary" type="button">Назад</button>
      </div>
-     <div id="reviewsContainer" class="muted" style="margin-top: 10px;">Загрузка...</div>
+ 
+     <div class="card step" id="step3">
+       <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
+       <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..."></textarea>
+       <div class="btn-row">
+         <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
+         <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
+       </div>
+       <p id="sendStatus" class="status"></p>
+     </div>
    </div>
  
    <script>
      const BASE = '/voice-feedback';
-     const companyId = {{ company.id }};
-     const backBtn = document.getElementById('backBtn');
-     const refreshBtn = document.getElementById('refreshBtn');
-     const container = document.getElementById('reviewsContainer');
+     const companySlug = "{{ company.slug }}";
  
-     async function loadReviews() {
-       container.textContent = 'Загрузка...';
-       try {
-@@ -77,52 +88,56 @@
-       const table = document.createElement('table');
-       table.innerHTML = `
-         <thead>
-           <tr>
-             <th>ID</th>
-             <th>Имя</th>
-             <th>Тональность</th>
-             <th>Текст</th>
-             <th>Создан</th>
-           </tr>
-         </thead>
-       `;
-       const tbody = document.createElement('tbody');
-       reviews.forEach((r) => {
-         const tr = document.createElement('tr');
-         tr.innerHTML = `
-           <td>${r.id}</td>
-           <td>${r.user_name || '—'}</td>
-           <td>${sentimentTag(r.sentiment)}</td>
-           <td>${(r.normalized_text || '').replace(/</g, '&lt;')}</td>
-           <td>${new Date(r.created_at).toLocaleString('ru-RU')}</td>
-         `;
-         tbody.appendChild(tr);
+     let mediaRecorder;
+     let recorderMime;
+     let audioChunks = [];
++    let useFallback = false;
++    let fallbackContext = null;
++    let fallbackProcessor = null;
++    let fallbackSource = null;
++    let fallbackStream = null;
++    let fallbackBuffers = [];
+     let reviewId = null;
+     let normalizedText = "";
+ 
+     const step1 = document.getElementById("step1");
+     const step2 = document.getElementById("step2");
+     const step3 = document.getElementById("step3");
+ 
+     function showStep(n) {
+       [step1, step2, step3].forEach((el, i) => {
+         el.classList.toggle("active", i === (n-1));
        });
-       table.appendChild(tbody);
-+      const wrapper = document.createElement('div');
-+      wrapper.className = 'table-wrapper';
-+      wrapper.appendChild(table);
+     }
+ 
+     const startBtn = document.getElementById("startBtn");
+     const stopBtn = document.getElementById("stopBtn");
+     const recordStatus = document.getElementById("recordStatus");
+     const userNameInput = document.getElementById("userName");
+     const aiText = document.getElementById("aiText");
+     const sentimentSpan = document.getElementById("sentimentSpan");
+     const editBtn = document.getElementById("editBtn");
+     const finalText = document.getElementById("finalText");
+     const sendBtn = document.getElementById("sendBtn");
+     const sendStatus = document.getElementById("sendStatus");
+ 
+     startBtn.onclick = async () => {
+       audioChunks = [];
+-    
+-      let preferredMime = null;
+-    
+-      // 1. Пробуем ogg/opus (идеальный вариант для SpeechKit)
+-      if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+-        preferredMime = 'audio/ogg;codecs=opus';
+-      } else if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
+-        // иногда браузеры чувствительны к пробелам
+-        preferredMime = 'audio/ogg; codecs=opus';
+-      }
+-    
+-      // 2. Если ogg не поддерживается — пробуем webm/opus (часто так в Chrome)
+-      if (!preferredMime) {
+-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+-          preferredMime = 'audio/webm;codecs=opus';
+-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+-          preferredMime = 'audio/webm';
+-        }
+-      }
+-    
+-      // 3. Если ни один формат не подошёл — реально нет поддержки MediaRecorder
+-      if (!preferredMime) {
+-        recordStatus.textContent = "Ваш браузер не поддерживает запись аудио через MediaRecorder. Попробуйте другой браузер (Chrome/Edge/Firefox на компьютере).";
++      fallbackBuffers = [];
++      useFallback = false;
 +
-       container.innerHTML = '';
--      container.appendChild(table);
-+      container.appendChild(wrapper);
-       const note = document.createElement('div');
-       note.className = 'muted table-note';
-       note.textContent = 'Для выгрузки CSV вернитесь и нажмите «CSV по компании» или общий экспорт.';
-       container.appendChild(note);
-     }
- 
-     function sentimentTag(sentiment) {
-       const val = (sentiment || '').toLowerCase();
-       let cls = 'neutral';
-       if (val.includes('pos')) cls = 'positive';
-       if (val.includes('neg')) cls = 'negative';
-       return `<span class="tag ${cls}">${sentiment || 'n/a'}</span>`;
-     }
- 
-     refreshBtn.onclick = loadReviews;
-     backBtn.onclick = () => {
-       if (document.referrer) {
-         window.history.back();
-       } else {
-         window.location.href = `${BASE}/admin/login`;
++      if (typeof MediaRecorder === 'undefined') {
++        await startFallbackRecorder();
+         return;
+       }
+-    
++
++      let preferredMime = null;
++
+       try {
++        // 1. Пробуем ogg/opus (идеальный вариант для SpeechKit)
++        if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
++          preferredMime = 'audio/ogg;codecs=opus';
++        } else if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
++          // иногда браузеры чувствительны к пробелам
++          preferredMime = 'audio/ogg; codecs=opus';
++        }
++
++        // 2. Если ogg не поддерживается — пробуем webm/opus (часто так в Chrome)
++        if (!preferredMime) {
++          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
++            preferredMime = 'audio/webm;codecs=opus';
++          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
++            preferredMime = 'audio/webm';
++          }
++        }
++
++        // 3. Если ни один формат не подошёл — включаем ручной рекордер
++        if (!preferredMime) {
++          await startFallbackRecorder();
++          return;
++        }
++
+         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+-    
++
+         recorderMime = preferredMime;
+-    
++
+         mediaRecorder = new MediaRecorder(stream, { mimeType: recorderMime });
+         mediaRecorder.ondataavailable = (e) => {
+           audioChunks.push(e.data);
+         };
+         mediaRecorder.onstop = onRecordStop;
+         mediaRecorder.start();
+         recordStatus.textContent = "Запись идёт...";
+         startBtn.disabled = true;
+         stopBtn.disabled = false;
+       } catch (e) {
+         console.error(e);
+-        recordStatus.textContent = "Не удалось получить доступ к микрофону.";
++        await startFallbackRecorder();
        }
      };
  
-     loadReviews();
-   </script>
-diff --git a/templates/public_form.html b/templates/public_form.html
-index 5ca0624218553ea222b81af442663690be37b53d..5036952510c47217a48ea5b865d6ca1bba8260a0 100644
---- a/templates/public_form.html
-+++ b/templates/public_form.html
-@@ -1,29 +1,30 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8">
-+  <meta name="viewport" content="width=device-width, initial-scale=1">
-   <title>Оставить голосовой отзыв — {{ company.name }}</title>
-   <style>
-     :root {
-       --bg: #f5f6fb;
-       --card: #ffffff;
-       --border: #e5e7eb;
-       --muted: #6b7280;
-       --text: #0f172a;
-       --primary: #2563eb;
-       --primary-hover: #1d4ed8;
-     }
-     body {
-       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-       margin: 0;
-       min-height: 100vh;
-       background: radial-gradient(circle at 0% 0%, #dbeafe 0, rgba(219,234,254,0) 35%),
-                   radial-gradient(circle at 100% 20%, #c7d2fe 0, rgba(199,210,254,0) 30%),
-                   var(--bg);
-       color: var(--text);
-       padding: 24px;
-       box-sizing: border-box;
-     }
-     .container {
-       max-width: 760px;
-       margin: 0 auto 32px;
-@@ -69,50 +70,62 @@
-       border: none;
-       border-radius: 12px;
-       cursor: pointer;
-       font-weight: 700;
-       color: #fff;
-       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-       box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
-       transition: transform 0.1s ease, box-shadow 0.2s ease;
-     }
-     .btn.secondary {
-       background: #6b7280;
-       box-shadow: none;
-     }
-     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-     .btn:hover:not(:disabled) { transform: translateY(-1px); }
-     .info-box {
-       background: #eef2ff;
-       color: #4338ca;
-       border: 1px solid #c7d2fe;
-       padding: 10px 12px;
-       border-radius: 10px;
-       font-size: 14px;
-       margin-top: 8px;
-     }
-     .status { margin-top: 8px; font-size: 14px; color: var(--muted); }
-+
-+    @media (max-width: 640px) {
-+      body { padding: 16px; }
-+      .container { margin-bottom: 24px; }
-+      .card { padding: 16px; }
-+      h1 { font-size: 22px; line-height: 1.2; }
-+      h2 { font-size: 18px; }
-+      .logo { max-height: 72px; max-width: 100%; height: auto; }
-+      .btn-row { flex-direction: column; align-items: stretch; }
-+      .btn { width: 100%; text-align: center; }
-+      textarea { min-height: 120px; }
+     stopBtn.onclick = () => {
+-      if (mediaRecorder && mediaRecorder.state !== "inactive") {
++      if (useFallback) {
++        stopFallbackRecorder();
++      } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
+         mediaRecorder.stop();
+       }
+       stopBtn.disabled = true;
+       startBtn.disabled = false;
+       recordStatus.textContent = "Обработка записи...";
+     };
+ 
+     async function onRecordStop() {
+       const blob = new Blob(audioChunks, { type: recorderMime || "audio/webm" });
++      await uploadAudioBlob(blob, recorderMime || "audio/webm");
 +    }
-   </style>
- </head>
- <body>
-   <div class="container">
-     <h1>Отзыв для {{ company.name }}</h1>
-     <p>Запишите короткий отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
-     {% if company.logo_path %}
-       <img src="{{ company.logo_path }}" alt="Логотип" class="logo">
-     {% endif %}
++
++    async function uploadAudioBlob(blob, mimeType) {
+       const formData = new FormData();
+-    
+-      const filename = (recorderMime && recorderMime.startsWith("audio/ogg"))
+-        ? "record.ogg"
+-        : "record.webm";
+-    
++
++      let filename = "record.webm";
++
++      if (mimeType && mimeType.startsWith("audio/ogg")) {
++        filename = "record.ogg";
++      } else if (mimeType && mimeType.startsWith("audio/wav")) {
++        filename = "record.wav";
++      }
++
+       formData.append("audio", blob, filename);
+       formData.append("user_name", userNameInput.value || "");
+-    
++
+       recordStatus.textContent = "Обработка записи...";
+-    
++
+       const res = await fetch(`${BASE}/api/public/${companySlug}/upload-audio`, {
+         method: "POST",
+         body: formData
+       });
+-    
++
+       if (!res.ok) {
+         recordStatus.textContent = "Ошибка при отправке аудио.";
+         return;
+       }
+-    
++
+       const data = await res.json();
+       reviewId = data.review_id;
+       normalizedText = data.normalized_text;
+       aiText.textContent = data.normalized_text;
+       sentimentSpan.textContent = data.sentiment;
+-    
++
+       recordStatus.textContent = "";
+       showStep(2);
+     }
  
-     <div class="card step active" id="step1">
-       <h2>Шаг 1. Запишите голосовой отзыв</h2>
-       <div class="input-group">
-         <label for="userName">Ваше имя (или ник)</label>
-         <input type="text" id="userName" placeholder="Иван">
-       </div>
-       <div class="btn-row">
-         <button id="startBtn" class="btn" type="button">Начать запись</button>
-         <button id="stopBtn" class="btn secondary" type="button" disabled>Остановить</button>
-       </div>
-       <div class="info-box">Запись делается через микрофон устройства. Не закрывайте вкладку, пока идёт запись.</div>
-       <p id="recordStatus" class="status"></p>
-     </div>
++    async function startFallbackRecorder() {
++      try {
++        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
++        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
++
++        fallbackContext = new AudioContextClass();
++        fallbackStream = stream;
++
++        fallbackSource = fallbackContext.createMediaStreamSource(stream);
++        fallbackProcessor = fallbackContext.createScriptProcessor(4096, 1, 1);
++        const silentGain = fallbackContext.createGain();
++        silentGain.gain.value = 0;
++
++        fallbackProcessor.onaudioprocess = (event) => {
++          fallbackBuffers.push(new Float32Array(event.inputBuffer.getChannelData(0)));
++        };
++
++        fallbackSource.connect(fallbackProcessor);
++        fallbackProcessor.connect(silentGain);
++        silentGain.connect(fallbackContext.destination);
++
++        useFallback = true;
++        recordStatus.textContent = "Запись идёт...";
++        startBtn.disabled = true;
++        stopBtn.disabled = false;
++      } catch (error) {
++        console.error(error);
++        recordStatus.textContent = "Не удалось получить доступ к микрофону.";
++      }
++    }
++
++    function stopFallbackRecorder() {
++      if (!fallbackContext || !fallbackProcessor) {
++        recordStatus.textContent = "Не удалось завершить запись.";
++        return;
++      }
++
++      fallbackProcessor.disconnect();
++      if (fallbackSource) fallbackSource.disconnect();
++
++      if (fallbackStream) {
++        fallbackStream.getTracks().forEach((track) => track.stop());
++      }
++
++      const wavBlob = encodeWAV(fallbackBuffers, fallbackContext.sampleRate);
++
++      fallbackBuffers = [];
++
++      if (fallbackContext && typeof fallbackContext.close === 'function') {
++        fallbackContext.close();
++      }
++
++      fallbackContext = null;
++      fallbackProcessor = null;
++      fallbackSource = null;
++      fallbackStream = null;
++
++      uploadAudioBlob(wavBlob, "audio/wav");
++    }
++
++    function encodeWAV(buffers, sampleRate) {
++      const totalLength = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
++      const wavBuffer = new ArrayBuffer(44 + totalLength * 2);
++      const view = new DataView(wavBuffer);
++
++      // RIFF chunk descriptor
++      writeString(view, 0, 'RIFF');
++      view.setUint32(4, 36 + totalLength * 2, true);
++      writeString(view, 8, 'WAVE');
++
++      // fmt sub-chunk
++      writeString(view, 12, 'fmt ');
++      view.setUint32(16, 16, true); // Subchunk1Size
++      view.setUint16(20, 1, true); // AudioFormat (PCM)
++      view.setUint16(22, 1, true); // NumChannels
++      view.setUint32(24, sampleRate, true); // SampleRate
++      view.setUint32(28, sampleRate * 2, true); // ByteRate
++      view.setUint16(32, 2, true); // BlockAlign
++      view.setUint16(34, 16, true); // BitsPerSample
++
++      // data sub-chunk
++      writeString(view, 36, 'data');
++      view.setUint32(40, totalLength * 2, true);
++
++      let offset = 44;
++      buffers.forEach((buffer) => {
++        for (let i = 0; i < buffer.length; i++, offset += 2) {
++          const sample = Math.max(-1, Math.min(1, buffer[i]));
++          view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
++        }
++      });
++
++      return new Blob([view], { type: 'audio/wav' });
++    }
++
++    function writeString(view, offset, string) {
++      for (let i = 0; i < string.length; i++) {
++        view.setUint8(offset + i, string.charCodeAt(i));
++      }
++    }
++
+     editBtn.onclick = () => {
+       finalText.value = normalizedText;
+       showStep(3);
+     };
  
-     <div class="card step" id="step2">
+     sendBtn.onclick = async () => {
+       sendStatus.textContent = "Отправка...";
+       const body = {
+         text: finalText.value,
+         user_name: userNameInput.value || null,
+       };
+ 
+       const res = await fetch(`${BASE}/api/public/reviews/${reviewId}/finalize`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify(body)
+       });
+ 
+       const data = await res.json();
+       if (data.status === "ok" && data.email_sent) {
+         sendStatus.textContent = "Спасибо! Ваш отзыв отправлен.";
+         sendBtn.disabled = true;
+       } else {
+         sendStatus.textContent = "Отзыв сохранён, но письмо не удалось отправить (ошибка email).";
+       }
