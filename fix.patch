@@ -1,157 +1,8 @@
-diff --git a/ai_utils.py b/ai_utils.py
-index 377a122ccfb29e9d820ab6255d9e57f057b75390..0a879ae5e8218414e50f187ccff34ecbdd20ac10 100644
---- a/ai_utils.py
-+++ b/ai_utils.py
-@@ -94,57 +94,57 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
-         headers=headers,
-         data=audio_bytes,
-         timeout=30,
-     )
- 
-     if response.status_code != 200:
-         logger.error(
-             "SpeechKit error (status=%s): %s",
-             response.status_code,
-             response.text,
-         )
-         raise RuntimeError(
-             f"SpeechKit STT request failed with status {response.status_code}"
-         )
- 
-     payload = response.json()
-     if payload.get("error_code"):
-         raise RuntimeError(
-             f"SpeechKit STT error {payload.get('error_code')}:"
-             f" {payload.get('error_message')}"
-         )
- 
-     return (payload.get("result") or "").strip()
- 
- 
--def _build_gpt_prompt() -> str:
-+def _build_gpt_prompt(normalization_prompt: str) -> str:
-     """
-     Строим единый промпт: сначала правила рерайта, затем правила тональности,
-     дальше — требование вернуть строгий JSON.
-     """
-     return (
--        f"{NORMALIZATION_PROMPT}\n\n"
-+        f"{normalization_prompt}\n\n"
-         f"{SENTIMENT_PROMPT}\n\n"
-         "Формат ответа:\n"
-         'Верни строго один JSON-объект без Markdown, без пояснений и без лишнего текста:\n'
-         '{"normalized_text": "...", "sentiment": "positive|neutral|negative"}\n'
-         "Никаких комментариев, вступлений и пояснений — только JSON."
-     )
- 
- 
- def _heuristic_sentiment_from_text(text: str) -> str:
-     """
-     Определяем тональность ТОЛЬКО по тексту, без учёта ответа модели.
-     Возвращает: 'positive', 'neutral' или 'negative'.
-     """
-     t = (text or "").lower()
- 
-     negative_markers = [
-         "не понрав",          # "не понравились услуги", "не понравилось"
-         "ужасн",              # "ужасный", "ужасно"
-         "отврат",             # "отвратительно"
-         "кошмар",
-         "плохой", "плохая", "плохие", "плохо",
-         "медленн",            # "медленное обслуживание"
-         "разочарован", "разочарована", "разочарование",
-         "не рекоменд",        # "не рекомендую", "не рекомендовал"
-         "не советую",
-@@ -204,79 +204,82 @@ def _parse_gpt_response(text: str, fallback: str) -> Tuple[str, str]:
-         # Пытаемся вытащить JSON-объект из текста
-         match = re.search(r"\{.*\}", raw, flags=re.S)
-         json_str = match.group(0) if match else raw
- 
-         data = json.loads(json_str)
- 
-         normalized = (data.get("normalized_text") or fallback).strip()
-         sentiment = (data.get("sentiment") or "").strip().lower()
- 
-         if sentiment not in {"positive", "neutral", "negative"}:
-             sentiment = _heuristic_sentiment_from_text(normalized)
- 
-         return normalized, sentiment
- 
-     except Exception as e:
-         logger.warning(
-             "Не удалось разобрать ответ YandexGPT как JSON: %r, ошибка: %s",
-             raw,
-             e,
-         )
-         normalized = fallback.strip()
-         sentiment = _heuristic_sentiment_from_text(normalized)
-         return normalized, sentiment
- 
- 
--def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
-+def normalize_and_analyze_with_yandex_gpt(
-+    raw_text: str, *, normalization_prompt: str | None = None
-+) -> Tuple[str, str]:
-     """
-     Отправляет текст в YandexGPT для нормализации (рерайта) и определения тональности.
-     Возвращает (normalized_text, sentiment).
- 
-     - normalized_text: переписанный отзыв без слов-паразитов, с пунктуацией;
-     - sentiment: 'positive', 'neutral' или 'negative'.
-     """
-     raw_text = raw_text or ""
-+    prompt_text = (normalization_prompt or NORMALIZATION_PROMPT).strip() or NORMALIZATION_PROMPT
- 
-     if not YANDEX_FOLDER_ID:
-         raise RuntimeError("YANDEX_FOLDER_ID не задан")
- 
-     headers = {"Content-Type": "application/json"}
-     headers.update(_auth_headers())
- 
-     model_uri = f"gpt://{YANDEX_FOLDER_ID}/{YANDEX_GPT_MODEL}"
- 
-     body = {
-         "modelUri": model_uri,
-         "completionOptions": {
-             "stream": False,
-             "temperature": 0.4,  # чуть свободнее, чтобы рерайт действительно переписывал
-             "maxTokens": 800,
-         },
-         "messages": [
-             {
-                 "role": "system",
--                "text": _build_gpt_prompt(),
-+                "text": _build_gpt_prompt(prompt_text),
-             },
-             {
-                 "role": "user",
-                 "text": raw_text,
-             },
-         ],
-         # Просим модель вернуть именно JSON-объект
-         "json_object": True,
-     }
- 
-     try:
-         response = requests.post(
-             YANDEX_GPT_URL, headers=headers, json=body, timeout=30
-         )
-     except requests.RequestException as e:
-         logger.error("YandexGPT request error: %s", e)
-         normalized = raw_text.strip()
-         sentiment = _heuristic_sentiment_from_text(normalized)
-         return normalized, sentiment
- 
-     if response.status_code != 200:
-         logger.error("YandexGPT error (status=%s): %s", response.status_code, response.text)
-         normalized = raw_text.strip()
-         sentiment = _heuristic_sentiment_from_text(normalized)
-         return normalized, sentiment
 diff --git a/main.py b/main.py
-index f6eb8cd8b6570a6c806261d2b31ad022f97adcc0..893aca023e984301de7be4772ec46e973433e94e 100644
+index 893aca023e984301de7be4772ec46e973433e94e..7a755edd5107219cfc54106f52de9bd3fe5493c7 100644
 --- a/main.py
 +++ b/main.py
-@@ -1,48 +1,56 @@
+@@ -1,45 +1,49 @@
  import os
  from pathlib import Path
  from typing import List, Optional
@@ -163,27 +14,31 @@ index f6eb8cd8b6570a6c806261d2b31ad022f97adcc0..893aca023e984301de7be4772ec46e97
  from fastapi.responses import HTMLResponse, StreamingResponse
  from fastapi.staticfiles import StaticFiles
  from fastapi.templating import Jinja2Templates
-+from sqlalchemy import inspect, text
+ from sqlalchemy import inspect, text
  from sqlalchemy.orm import Session
  import qrcode
  
  from database import Base, engine, SessionLocal
  from models import Company, Review
--from schemas import CompanyCreate, CompanyOut, ReviewOut, ReviewFinalizeIn
-+from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, ReviewOut, ReviewFinalizeIn
+ from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, ReviewOut, ReviewFinalizeIn
  from email_utils import send_review_email
- from ai_utils import transcribe_audio_with_speechkit, normalize_and_analyze_with_yandex_gpt
+-from ai_utils import transcribe_audio_with_speechkit, normalize_and_analyze_with_yandex_gpt
++from ai_utils import (
++    NORMALIZATION_PROMPT,
++    normalize_and_analyze_with_yandex_gpt,
++    transcribe_audio_with_speechkit,
++)
  
  # Инициализация БД
  Base.metadata.create_all(bind=engine)
  
-+# Мягкая миграция: добавляем колонку prompt в таблицу companies, если её нет
-+with engine.connect() as conn:
-+    inspector = inspect(conn)
-+    columns = [col["name"] for col in inspector.get_columns("companies")]
-+    if "prompt" not in columns:
-+        conn.execute(text("ALTER TABLE companies ADD COLUMN prompt TEXT"))
-+
+ # Мягкая миграция: добавляем колонку prompt в таблицу companies, если её нет
+ with engine.connect() as conn:
+     inspector = inspect(conn)
+     columns = [col["name"] for col in inspector.get_columns("companies")]
+     if "prompt" not in columns:
+         conn.execute(text("ALTER TABLE companies ADD COLUMN prompt TEXT"))
+ 
  app = FastAPI(title="Voice Feedback Service")
  
  # Статика и шаблоны
@@ -198,9 +53,7 @@ index f6eb8cd8b6570a6c806261d2b31ad022f97adcc0..893aca023e984301de7be4772ec46e97
  
  app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
  templates = Jinja2Templates(directory=str(templates_dir))
- 
- 
- def get_db():
+@@ -49,51 +53,54 @@ def get_db():
      db = SessionLocal()
      try:
          yield db
@@ -209,7 +62,40 @@ index f6eb8cd8b6570a6c806261d2b31ad022f97adcc0..893aca023e984301de7be4772ec46e97
  
  
  ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
-@@ -79,67 +87,84 @@ def require_admin(request: Request):
+ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ 
+ 
+ @app.get("/admin/login", response_class=HTMLResponse)
+ async def admin_login_page(request: Request):
+     return templates.TemplateResponse("admin_login.html", {"request": request})
+ 
+ 
+ @app.post("/admin/login", response_class=HTMLResponse)
+ async def admin_login(
+     request: Request,
+     login: str = Form(...),
+     password: str = Form(...)
+ ):
+     if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
+         response = templates.TemplateResponse(
+             "admin_dashboard.html",
+-            {"request": request}
++            {
++                "request": request,
++                "normalization_prompt": NORMALIZATION_PROMPT,
++            },
+         )
+         response.set_cookie("admin_auth", "1")
+         return response
+     return templates.TemplateResponse(
+         "admin_login.html",
+         {"request": request, "error": "Неверный логин или пароль"},
+         status_code=status.HTTP_401_UNAUTHORIZED,
+     )
+ 
+ 
+ def require_admin(request: Request):
+     if request.cookies.get("admin_auth") != "1":
          raise HTTPException(status_code=401, detail="Not authorized")
  
  
@@ -223,290 +109,70 @@ index f6eb8cd8b6570a6c806261d2b31ad022f97adcc0..893aca023e984301de7be4772ec46e97
          "company_reviews.html",
          {"request": request, "company": company},
      )
-     
-     
- @app.post("/api/admin/companies", response_model=CompanyOut)
- def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
-     existing = db.query(Company).filter(Company.slug == company.slug).first()
-     if existing:
-         raise HTTPException(status_code=400, detail="Slug already in use")
- 
-     db_company = Company(
-         name=company.name,
-         slug=company.slug,
-         email=company.email,
-+        prompt=None,
-     )
-     db.add(db_company)
-     db.commit()
-     db.refresh(db_company)
- 
- # Генерация QR-кода на публичную форму
-     public_url = f"https://dev.futuguru.com/voice-feedback/r/{db_company.slug}"
-     qr_img = qrcode.make(public_url)
-     qr_path = static_dir / "qr" / f"{db_company.slug}.png"
-     qr_img.save(qr_path)
-     db_company.qr_path = f"/static/qr/{db_company.slug}.png"
-     db.commit()
-     db.refresh(db_company)
- 
-     return db_company
- 
- 
-+@app.patch("/api/admin/companies/{company_id}/prompt", response_model=CompanyOut)
-+def update_company_prompt(
-+    company_id: int,
-+    data: CompanyPromptUpdate,
-+    db: Session = Depends(get_db),
-+):
-+    company = db.query(Company).get(company_id)
-+    if not company:
-+        raise HTTPException(status_code=404, detail="Company not found")
-+
-+    company.prompt = data.prompt.strip()
-+    db.commit()
-+    db.refresh(company)
-+    return company
-+
-+
- @app.get("/api/admin/companies", response_model=List[CompanyOut])
- def list_companies(db: Session = Depends(get_db)):
-     companies = db.query(Company).all()
-     return companies
- 
- 
- @app.delete("/api/admin/companies/{company_id}")
- def delete_company(company_id: int, db: Session = Depends(get_db)):
-     company = db.query(Company).get(company_id)
-     if not company:
-         raise HTTPException(status_code=404, detail="Company not found")
- 
-     db.query(Review).filter(Review.company_id == company_id).delete()
- 
-     for path_attr in ["qr_path", "logo_path"]:
-         path_value = getattr(company, path_attr)
-         if not path_value:
-             continue
-         relative_path = path_value
-         if relative_path.startswith("/static/"):
-             relative_path = relative_path.replace("/static/", "", 1)
-         file_path = static_dir / relative_path
-         if file_path.exists():
-             file_path.unlink()
- 
-@@ -275,51 +300,54 @@ async def upload_audio(
-                     "/usr/bin/ffmpeg",  # полный путь к ffmpeg
-                     "-y",
-                     "-i",
-                     str(orig_path),
-                     "-ac",
-                     "1",
-                     "-ar",
-                     "48000",
-                     "-c:a",
-                     "libopus",
-                     str(ogg_path),
-                 ],
-                 check=True,
-                 stdout=subprocess.DEVNULL,
-                 stderr=subprocess.DEVNULL,
-             )
-         except subprocess.CalledProcessError:
-             # если конвертация не удалась — логируем и кидаем 500
-             raise HTTPException(
-                 status_code=500,
-                 detail="Ошибка обработки аудио (ffmpeg). Попробуйте ещё раз или позже.",
-             )
- 
-     # --- 3. Распознаём речь по ogg через SpeechKit ---
-     raw_text = transcribe_audio_with_speechkit(str(ogg_path))
--    normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(raw_text)
-+    normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(
-+        raw_text,
-+        normalization_prompt=company.prompt,
-+    )
- 
-     # --- 4. Сохраняем отзыв (можно хранить путь к исходному файлу или к ogg) ---
-     review = Review(
-         company_id=company.id,
-         user_name=user_name,
-         audio_path=str(orig_path),  # исходник (webm или ogg) — для истории
-         raw_text=raw_text,
-         normalized_text=normalized_text,
-         sentiment=sentiment,
-         status="draft",
-     )
-     db.add(review)
-     db.commit()
-     db.refresh(review)
- 
-     return {
-         "review_id": review.id,
-         "raw_text": raw_text,
-         "normalized_text": normalized_text,
-         "sentiment": sentiment,
-     }
- 
- 
- @app.post("/api/public/reviews/{review_id}/finalize")
- def finalize_review(
-diff --git a/models.py b/models.py
-index 297d743ad9a1a20ff80f59f7c147db48004261aa..a9e40dfae8708af7540c8e0da4b0f86a2c1e81fe 100644
---- a/models.py
-+++ b/models.py
-@@ -1,32 +1,33 @@
- from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
- from sqlalchemy.orm import relationship
- from datetime import datetime
- from database import Base
- 
- class Company(Base):
-     __tablename__ = "companies"
- 
-     id = Column(Integer, primary_key=True, index=True)
-     name = Column(String, nullable=False)
-     slug = Column(String, unique=True, index=True)   # для URL типа /r/{slug}
-     email = Column(String, nullable=False)           # куда отправлять отзывы
-     logo_path = Column(String, nullable=True)
-     qr_path = Column(String, nullable=True)
-+    prompt = Column(Text, nullable=True)             # кастомный промпт для нейросети
- 
-     reviews = relationship("Review", back_populates="company")
- 
- 
- class Review(Base):
-     __tablename__ = "reviews"
- 
-     id = Column(Integer, primary_key=True, index=True)
-     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
-     user_name = Column(String, nullable=True)
-     audio_path = Column(String, nullable=True)
-     raw_text = Column(Text, nullable=True)           # как распознали
-     normalized_text = Column(Text, nullable=True)    # после нормализации
-     sentiment = Column(String, nullable=True)        # positive/neutral/negative
-     status = Column(String, default="draft")         # draft/final/sent
-     created_at = Column(DateTime, default=datetime.utcnow)
- 
-     company = relationship("Company", back_populates="reviews")
-diff --git a/schemas.py b/schemas.py
-index da3bd85548246c76009416b43c0999616c72fc4c..7c414a4f46e3c6ef578e94f5b415a77dec0b8adc 100644
---- a/schemas.py
-+++ b/schemas.py
-@@ -1,36 +1,41 @@
- from pydantic import BaseModel, EmailStr
- from typing import Optional
- from datetime import datetime
- 
- class CompanyCreate(BaseModel):
-     name: str
-     slug: str
-     email: EmailStr
- 
- class CompanyOut(BaseModel):
-     id: int
-     name: str
-     slug: str
-     email: EmailStr
-     logo_path: Optional[str]
-     qr_path: Optional[str]
-+    prompt: Optional[str]
- 
-     class Config:
-         orm_mode = True
- 
- class ReviewOut(BaseModel):
-     id: int
-     company_id: int
-     user_name: Optional[str]
-     raw_text: Optional[str]
-     normalized_text: Optional[str]
-     sentiment: Optional[str]
-     status: str
-     created_at: datetime
- 
-     class Config:
-         orm_mode = True
- 
- class ReviewFinalizeIn(BaseModel):
-     text: str   # окончательный текст, после редактирования
-     user_name: Optional[str] = None
-+
-+
-+class CompanyPromptUpdate(BaseModel):
-+    prompt: str
 diff --git a/templates/admin_dashboard.html b/templates/admin_dashboard.html
-index 73680edcb036bc77e737635eb92d5d01f79bae62..d25b0ded811149b8a49a2d4d295153cea04d764d 100644
+index d25b0ded811149b8a49a2d4d295153cea04d764d..b8350ee641c105a5df509f9767cd3acc5ee875c0 100644
 --- a/templates/admin_dashboard.html
 +++ b/templates/admin_dashboard.html
-@@ -26,63 +26,65 @@
-     }
-     h1 {
-       margin-bottom: 8px;
-       letter-spacing: -0.01em;
-     }
-     h2 {
+@@ -203,50 +203,58 @@
+     .modal-card h3 {
        margin-top: 0;
-       margin-bottom: 10px;
-       letter-spacing: -0.01em;
+       margin-bottom: 12px;
      }
-     .card {
-       background: var(--card);
-       border-radius: 14px;
-       padding: 18px 18px 20px;
-       margin-bottom: 16px;
-       box-shadow: 0 10px 36px rgba(15, 23, 42, 0.08);
-       border: 1px solid rgba(37, 99, 235, 0.08);
+ 
+     @media (max-width: 900px) {
+       body { padding: 20px; }
+       h1 { font-size: 24px; }
+       h2 { font-size: 18px; }
+       .card { padding: 16px; }
+       .flex { flex-direction: column; align-items: flex-start; }
+       .row-actions { flex-direction: column; align-items: stretch; }
+       .row-actions button { width: 100%; }
+       .row-actions input { width: 100%; }
+       .table-wrapper { margin: 0 -6px; padding: 0 6px; }
+       table { min-width: 640px; }
      }
-     label {
-       display: block;
-       margin-bottom: 10px;
-       font-weight: 600;
-       color: #111827;
-     }
-     input[type="text"],
--    input[type="email"] {
-+    input[type="email"],
-+    textarea {
-       width: 100%;
-       padding: 11px 12px;
-       border-radius: 10px;
-       border: 1px solid var(--border);
-       box-sizing: border-box;
-       margin-top: 6px;
-       background: linear-gradient(135deg, #f8fafc, #eef2ff);
-       transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-       font-size: 14px;
-     }
-     input[type="text"]:focus,
--    input[type="email"]:focus {
-+    input[type="email"]:focus,
-+    textarea:focus {
-       outline: none;
-       border-color: var(--primary);
-       box-shadow: 0 10px 30px rgba(37, 99, 235, 0.16);
-       background: #fff;
-     }
-     button {
-       padding: 10px 16px;
-       border-radius: 10px;
-       border: none;
-       cursor: pointer;
-       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-       color: #fff;
-       font-size: 14px;
-       font-weight: 700;
-       transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
-       box-shadow: 0 12px 30px rgba(37, 99, 235, 0.2);
-     }
-     button.secondary {
-       background: #6b7280;
-       box-shadow: none;
-     }
-     button.danger {
-       background: #dc2626;
-       box-shadow: none;
-     }
-@@ -365,60 +367,77 @@
+   </style>
+ </head>
+ <body>
+   <h1>Админ-панель Voice Feedback</h1>
+   <p class="muted">
+     Здесь можно создавать компании, получать ссылки/QR-коды и работать с отзывами.
+   </p>
+ 
++  <div class="card">
++    <h2>Промпт для нейросети</h2>
++    <p class="muted" style="margin-top: -4px;">
++      Используется по умолчанию для всех компаний.
++    </p>
++    <textarea rows="9" readonly>{{ normalization_prompt }}</textarea>
++  </div>
++
+   <!-- Блок создания компании -->
+   <div class="card">
+     <h2>Создать компанию</h2>
+     <form id="createCompanyForm">
+       <label>
+         Название компании
+         <input type="text" id="companyName" required />
+       </label>
+       <label>
+         Slug (для URL, латиница, без пробелов, например <code>beauty-salon-lux</code>)
+         <input type="text" id="companySlug" required />
+       </label>
+       <label>
+         Email (куда отправлять отзывы)
+         <input type="email" id="companyEmail" required />
+       </label>
+       <button type="submit">Создать компанию</button>
+       <span id="createStatus" class="status"></span>
+     </form>
+   </div>
+ 
+   <!-- Список компаний -->
+   <div class="card">
+     <div class="flex">
+       <h2 style="margin-bottom: 0;">Компании</h2>
+@@ -367,77 +375,60 @@
  
          // Загрузка логотипа
          const logoInputId = `logo-input-${c.id}`;
@@ -532,33 +198,34 @@ index 73680edcb036bc77e737635eb92d5d01f79bae62..d25b0ded811149b8a49a2d4d295153ce
          reviewsBtn.textContent = 'Отзывы';
          reviewsBtn.onclick = () => openReviewsPage(c.id);
  
-+        // Промпт для нейросети
-+        const promptAreaId = `prompt-${c.id}`;
-+        const promptStatusId = `prompt-status-${c.id}`;
-+        const promptBlock = document.createElement('div');
-+        promptBlock.style.width = '100%';
-+        promptBlock.innerHTML = `
-+          <label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Промпт для нейросети</label>
-+          <textarea id="${promptAreaId}" rows="4" placeholder="Если оставить пустым, будет использоваться промпт по умолчанию">${c.prompt || ''}</textarea>
-+          <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap: wrap;">
-+            <button class="small" type="button">Сохранить промпт</button>
-+            <span id="${promptStatusId}" class="status"></span>
-+          </div>
-+        `;
-+        const promptBtn = promptBlock.querySelector('button');
-+        promptBtn.onclick = () => savePrompt(c.id, promptAreaId, promptStatusId);
-+
+-        // Промпт для нейросети
+-        const promptAreaId = `prompt-${c.id}`;
+-        const promptStatusId = `prompt-status-${c.id}`;
+-        const promptBlock = document.createElement('div');
+-        promptBlock.style.width = '100%';
+-        promptBlock.innerHTML = `
+-          <label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Промпт для нейросети</label>
+-          <textarea id="${promptAreaId}" rows="4" placeholder="Если оставить пустым, будет использоваться промпт по умолчанию">${c.prompt || ''}</textarea>
+-          <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap: wrap;">
+-            <button class="small" type="button">Сохранить промпт</button>
+-            <span id="${promptStatusId}" class="status"></span>
+-          </div>
+-        `;
+-        const promptBtn = promptBlock.querySelector('button');
+-        promptBtn.onclick = () => savePrompt(c.id, promptAreaId, promptStatusId);
+-
          // Удаление
          const deleteBtn = document.createElement('button');
          deleteBtn.type = 'button';
          deleteBtn.className = 'small danger';
          deleteBtn.textContent = 'Удалить';
          deleteBtn.onclick = () => deleteCompany(c.id, c.name);
-         
+-        
++
          actions.appendChild(logoBlock);
          actions.appendChild(csvBtn);
          actions.appendChild(reviewsBtn);
-+        actions.appendChild(promptBlock);
+-        actions.appendChild(promptBlock);
          actions.appendChild(deleteBtn);
          tdActions.appendChild(actions);
  
@@ -584,8 +251,7 @@ index 73680edcb036bc77e737635eb92d5d01f79bae62..d25b0ded811149b8a49a2d4d295153ce
      function openQrModal(qrUrl) {
        const modal = document.getElementById('qrModal');
        const img = document.getElementById('qrModalImg');
-@@ -448,50 +467,70 @@
-           method: 'POST',
+@@ -468,70 +459,50 @@
            body: fd,
          });
          if (!res.ok) throw new Error('Ошибка загрузки логотипа');
@@ -610,27 +276,27 @@ index 73680edcb036bc77e737635eb92d5d01f79bae62..d25b0ded811149b8a49a2d4d295153ce
          console.error(e);
        }
      }
-+
-+    async function savePrompt(companyId, textareaId, statusId) {
-+      const textarea = document.getElementById(textareaId);
-+      const statusEl = document.getElementById(statusId);
-+      statusEl.textContent = 'Сохранение...';
-+
-+      try {
-+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/prompt`, {
-+          method: 'PATCH',
-+          headers: { 'Content-Type': 'application/json' },
-+          body: JSON.stringify({ prompt: textarea.value || '' }),
-+        });
-+        if (!res.ok) throw new Error('Ошибка сохранения');
-+        await res.json();
-+        statusEl.textContent = 'Сохранено';
-+      } catch (e) {
-+        console.error(e);
-+        statusEl.textContent = 'Не удалось сохранить';
-+      }
-+    }
-     
+ 
+-    async function savePrompt(companyId, textareaId, statusId) {
+-      const textarea = document.getElementById(textareaId);
+-      const statusEl = document.getElementById(statusId);
+-      statusEl.textContent = 'Сохранение...';
+-
+-      try {
+-        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/prompt`, {
+-          method: 'PATCH',
+-          headers: { 'Content-Type': 'application/json' },
+-          body: JSON.stringify({ prompt: textarea.value || '' }),
+-        });
+-        if (!res.ok) throw new Error('Ошибка сохранения');
+-        await res.json();
+-        statusEl.textContent = 'Сохранено';
+-      } catch (e) {
+-        console.error(e);
+-        statusEl.textContent = 'Не удалось сохранить';
+-      }
+-    }
+-    
      function downloadCsvForCompany(companyId) {
        const url = `${BASE}/api/admin/reviews/export?company_id=${companyId}`;
        window.open(url, '_blank');
@@ -655,3 +321,4 @@ index 73680edcb036bc77e737635eb92d5d01f79bae62..d25b0ded811149b8a49a2d4d295153ce
        }
        try {
          const res = await fetch(`${BASE}/api/admin/companies`, {
+           method: 'POST',

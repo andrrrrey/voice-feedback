@@ -17,7 +17,11 @@ from database import Base, engine, SessionLocal
 from models import Company, Review
 from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, ReviewOut, ReviewFinalizeIn
 from email_utils import send_review_email
-from ai_utils import transcribe_audio_with_speechkit, normalize_and_analyze_with_yandex_gpt
+from ai_utils import (
+    NORMALIZATION_PROMPT,
+    normalize_and_analyze_with_yandex_gpt,
+    transcribe_audio_with_speechkit,
+)
 
 # Инициализация БД
 Base.metadata.create_all(bind=engine)
@@ -71,7 +75,10 @@ async def admin_login(
     if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
         response = templates.TemplateResponse(
             "admin_dashboard.html",
-            {"request": request}
+            {
+                "request": request,
+                "normalization_prompt": NORMALIZATION_PROMPT,
+            },
         )
         response.set_cookie("admin_auth", "1")
         return response
