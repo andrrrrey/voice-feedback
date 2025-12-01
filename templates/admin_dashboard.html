@@ -48,7 +48,8 @@
       color: #111827;
     }
     input[type="text"],
-    input[type="email"] {
+    input[type="email"],
+    textarea {
       width: 100%;
       padding: 11px 12px;
       border-radius: 10px;
@@ -60,7 +61,8 @@
       font-size: 14px;
     }
     input[type="text"]:focus,
-    input[type="email"]:focus {
+    input[type="email"]:focus,
+    textarea:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 10px 30px rgba(37, 99, 235, 0.16);
@@ -387,6 +389,22 @@
         reviewsBtn.textContent = 'Отзывы';
         reviewsBtn.onclick = () => openReviewsPage(c.id);
 
+        // Промпт для нейросети
+        const promptAreaId = `prompt-${c.id}`;
+        const promptStatusId = `prompt-status-${c.id}`;
+        const promptBlock = document.createElement('div');
+        promptBlock.style.width = '100%';
+        promptBlock.innerHTML = `
+          <label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Промпт для нейросети</label>
+          <textarea id="${promptAreaId}" rows="4" placeholder="Если оставить пустым, будет использоваться промпт по умолчанию">${c.prompt || ''}</textarea>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap: wrap;">
+            <button class="small" type="button">Сохранить промпт</button>
+            <span id="${promptStatusId}" class="status"></span>
+          </div>
+        `;
+        const promptBtn = promptBlock.querySelector('button');
+        promptBtn.onclick = () => savePrompt(c.id, promptAreaId, promptStatusId);
+
         // Удаление
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
@@ -397,6 +415,7 @@
         actions.appendChild(logoBlock);
         actions.appendChild(csvBtn);
         actions.appendChild(reviewsBtn);
+        actions.appendChild(promptBlock);
         actions.appendChild(deleteBtn);
         tdActions.appendChild(actions);
 
@@ -468,6 +487,26 @@
       } catch (e) {
         alert('Не удалось удалить компанию');
         console.error(e);
+      }
+    }
+
+    async function savePrompt(companyId, textareaId, statusId) {
+      const textarea = document.getElementById(textareaId);
+      const statusEl = document.getElementById(statusId);
+      statusEl.textContent = 'Сохранение...';
+
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/prompt`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: textarea.value || '' }),
+        });
+        if (!res.ok) throw new Error('Ошибка сохранения');
+        await res.json();
+        statusEl.textContent = 'Сохранено';
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = 'Не удалось сохранить';
       }
     }
     

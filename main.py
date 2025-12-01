@@ -9,17 +9,25 @@ from fastapi import FastAPI, Depends, Request, Form, UploadFile, File, HTTPExcep
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 import qrcode
 
 from database import Base, engine, SessionLocal
 from models import Company, Review
-from schemas import CompanyCreate, CompanyOut, ReviewOut, ReviewFinalizeIn
+from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, ReviewOut, ReviewFinalizeIn
 from email_utils import send_review_email
 from ai_utils import transcribe_audio_with_speechkit, normalize_and_analyze_with_yandex_gpt
 
 # Инициализация БД
 Base.metadata.create_all(bind=engine)
+
+# Мягкая миграция: добавляем колонку prompt в таблицу companies, если её нет
+with engine.connect() as conn:
+    inspector = inspect(conn)
+    columns = [col["name"] for col in inspector.get_columns("companies")]
+    if "prompt" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN prompt TEXT"))
 
 app = FastAPI(title="Voice Feedback Service")
 
@@ -101,6 +109,7 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
         name=company.name,
         slug=company.slug,
         email=company.email,
+        prompt=None,
     )
     db.add(db_company)
     db.commit()
@@ -116,6 +125,22 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
     db.refresh(db_company)
 
     return db_company
+
+
+@app.patch("/api/admin/companies/{company_id}/prompt", response_model=CompanyOut)
+def update_company_prompt(
+    company_id: int,
+    data: CompanyPromptUpdate,
+    db: Session = Depends(get_db),
+):
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company.prompt = data.prompt.strip()
+    db.commit()
+    db.refresh(company)
+    return company
 
 
 @app.get("/api/admin/companies", response_model=List[CompanyOut])
@@ -297,7 +322,10 @@ async def upload_audio(
 
     # --- 3. Распознаём речь по ogg через SpeechKit ---
     raw_text = transcribe_audio_with_speechkit(str(ogg_path))
-    normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(raw_text)
+    normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(
+        raw_text,
+        normalization_prompt=company.prompt,
+    )
 
     # --- 4. Сохраняем отзыв (можно хранить путь к исходному файлу или к ogg) ---
     review = Review(

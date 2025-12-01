@@ -14,6 +14,7 @@ class CompanyOut(BaseModel):
     email: EmailStr
     logo_path: Optional[str]
     qr_path: Optional[str]
+    prompt: Optional[str]
 
     class Config:
         orm_mode = True
@@ -34,3 +35,7 @@ class ReviewOut(BaseModel):
 class ReviewFinalizeIn(BaseModel):
     text: str   # окончательный текст, после редактирования
     user_name: Optional[str] = None
+
+
+class CompanyPromptUpdate(BaseModel):
+    prompt: str

@@ -12,6 +12,7 @@ class Company(Base):
     email = Column(String, nullable=False)           # куда отправлять отзывы
     logo_path = Column(String, nullable=True)
     qr_path = Column(String, nullable=True)
+    prompt = Column(Text, nullable=True)             # кастомный промпт для нейросети
 
     reviews = relationship("Review", back_populates="company")
 

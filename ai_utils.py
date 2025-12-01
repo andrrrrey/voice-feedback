@@ -116,13 +116,13 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
     return (payload.get("result") or "").strip()
 
 
-def _build_gpt_prompt() -> str:
+def _build_gpt_prompt(normalization_prompt: str) -> str:
     """
     Строим единый промпт: сначала правила рерайта, затем правила тональности,
     дальше — требование вернуть строгий JSON.
     """
     return (
-        f"{NORMALIZATION_PROMPT}\n\n"
+        f"{normalization_prompt}\n\n"
         f"{SENTIMENT_PROMPT}\n\n"
         "Формат ответа:\n"
         'Верни строго один JSON-объект без Markdown, без пояснений и без лишнего текста:\n'
@@ -226,7 +226,9 @@ def _parse_gpt_response(text: str, fallback: str) -> Tuple[str, str]:
         return normalized, sentiment
 
 
-def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
+def normalize_and_analyze_with_yandex_gpt(
+    raw_text: str, *, normalization_prompt: str | None = None
+) -> Tuple[str, str]:
     """
     Отправляет текст в YandexGPT для нормализации (рерайта) и определения тональности.
     Возвращает (normalized_text, sentiment).
@@ -235,6 +237,7 @@ def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
     - sentiment: 'positive', 'neutral' или 'negative'.
     """
     raw_text = raw_text or ""
+    prompt_text = (normalization_prompt or NORMALIZATION_PROMPT).strip() or NORMALIZATION_PROMPT
 
     if not YANDEX_FOLDER_ID:
         raise RuntimeError("YANDEX_FOLDER_ID не задан")
@@ -254,7 +257,7 @@ def normalize_and_analyze_with_yandex_gpt(raw_text: str) -> Tuple[str, str]:
         "messages": [
             {
                 "role": "system",
-                "text": _build_gpt_prompt(),
+                "text": _build_gpt_prompt(prompt_text),
             },
             {
                 "role": "user",
