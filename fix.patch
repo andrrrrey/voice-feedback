@@ -1,390 +1,469 @@
-diff --git a/main.py b/main.py
-index 7a755edd5107219cfc54106f52de9bd3fe5493c7..32a95811b0c70ffb9862735367ee7bb328b4ef1f 100644
---- a/main.py
-+++ b/main.py
-@@ -38,68 +38,99 @@ app = FastAPI(title="Voice Feedback Service")
- # Статика и шаблоны
- BASE_DIR = Path(__file__).resolve().parent
- static_dir = BASE_DIR / "static"
- templates_dir = BASE_DIR / "templates"
- 
- static_dir.mkdir(exist_ok=True)
- (static_dir / "logos").mkdir(exist_ok=True)
- (static_dir / "qr").mkdir(exist_ok=True)
- (static_dir / "audio").mkdir(exist_ok=True)
- 
- app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
- templates = Jinja2Templates(directory=str(templates_dir))
- 
- 
- def get_db():
-     db = SessionLocal()
-     try:
-         yield db
-     finally:
-         db.close()
- 
- 
- ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
- ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
- 
-+PROMPT_FILE = BASE_DIR / "normalization_prompt.txt"
-+DEFAULT_NORMALIZATION_PROMPT = NORMALIZATION_PROMPT
-+_cached_normalization_prompt: Optional[str] = None
-+
-+
-+def load_normalization_prompt() -> str:
-+    global _cached_normalization_prompt
-+    if _cached_normalization_prompt is not None:
-+        return _cached_normalization_prompt
-+
-+    if PROMPT_FILE.exists():
-+        stored = PROMPT_FILE.read_text(encoding="utf-8").strip()
-+        if stored:
-+            _cached_normalization_prompt = stored
-+            return _cached_normalization_prompt
-+
-+    _cached_normalization_prompt = DEFAULT_NORMALIZATION_PROMPT
-+    return _cached_normalization_prompt
-+
-+
-+def update_normalization_prompt(new_prompt: str) -> str:
-+    global _cached_normalization_prompt
-+    cleaned = (new_prompt or "").strip() or DEFAULT_NORMALIZATION_PROMPT
-+    PROMPT_FILE.write_text(cleaned, encoding="utf-8")
-+    _cached_normalization_prompt = cleaned
-+    return _cached_normalization_prompt
-+
-+
-+# прогреваем кэш, чтобы промпт был доступен сразу
-+load_normalization_prompt()
-+
- 
- @app.get("/admin/login", response_class=HTMLResponse)
- async def admin_login_page(request: Request):
-     return templates.TemplateResponse("admin_login.html", {"request": request})
- 
- 
- @app.post("/admin/login", response_class=HTMLResponse)
- async def admin_login(
-     request: Request,
-     login: str = Form(...),
-     password: str = Form(...)
- ):
-     if login == ADMIN_LOGIN and password == ADMIN_PASSWORD:
-         response = templates.TemplateResponse(
-             "admin_dashboard.html",
-             {
-                 "request": request,
--                "normalization_prompt": NORMALIZATION_PROMPT,
-+                "normalization_prompt": load_normalization_prompt(),
-             },
-         )
-         response.set_cookie("admin_auth", "1")
-         return response
-     return templates.TemplateResponse(
-         "admin_login.html",
-         {"request": request, "error": "Неверный логин или пароль"},
-         status_code=status.HTTP_401_UNAUTHORIZED,
-     )
- 
- 
- def require_admin(request: Request):
-     if request.cookies.get("admin_auth") != "1":
-         raise HTTPException(status_code=401, detail="Not authorized")
- 
- 
- @app.get("/admin/companies/{company_id}/reviews", response_class=HTMLResponse)
- async def company_reviews_page(company_id: int, request: Request, db: Session = Depends(get_db)):
-     require_admin(request)
-     company = db.query(Company).get(company_id)
-     if not company:
-         raise HTTPException(status_code=404, detail="Company not found")
-     return templates.TemplateResponse(
-         "company_reviews.html",
-         {"request": request, "company": company},
-@@ -112,50 +143,61 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
-     if existing:
-         raise HTTPException(status_code=400, detail="Slug already in use")
- 
-     db_company = Company(
-         name=company.name,
-         slug=company.slug,
-         email=company.email,
-         prompt=None,
-     )
-     db.add(db_company)
-     db.commit()
-     db.refresh(db_company)
- 
- # Генерация QR-кода на публичную форму
-     public_url = f"https://dev.futuguru.com/voice-feedback/r/{db_company.slug}"
-     qr_img = qrcode.make(public_url)
-     qr_path = static_dir / "qr" / f"{db_company.slug}.png"
-     qr_img.save(qr_path)
-     db_company.qr_path = f"/static/qr/{db_company.slug}.png"
-     db.commit()
-     db.refresh(db_company)
- 
-     return db_company
- 
- 
-+@app.get("/api/admin/prompt")
-+def get_normalization_prompt():
-+    return {"prompt": load_normalization_prompt()}
-+
-+
-+@app.patch("/api/admin/prompt")
-+def set_normalization_prompt(data: CompanyPromptUpdate):
-+    updated_prompt = update_normalization_prompt(data.prompt)
-+    return {"prompt": updated_prompt}
-+
-+
- @app.patch("/api/admin/companies/{company_id}/prompt", response_model=CompanyOut)
- def update_company_prompt(
-     company_id: int,
-     data: CompanyPromptUpdate,
-     db: Session = Depends(get_db),
- ):
-     company = db.query(Company).get(company_id)
-     if not company:
-         raise HTTPException(status_code=404, detail="Company not found")
- 
-     company.prompt = data.prompt.strip()
-     db.commit()
-     db.refresh(company)
-     return company
- 
- 
- @app.get("/api/admin/companies", response_model=List[CompanyOut])
- def list_companies(db: Session = Depends(get_db)):
-     companies = db.query(Company).all()
-     return companies
- 
- 
- @app.delete("/api/admin/companies/{company_id}")
- def delete_company(company_id: int, db: Session = Depends(get_db)):
-     company = db.query(Company).get(company_id)
-@@ -309,51 +351,51 @@ async def upload_audio(
-                     "-i",
-                     str(orig_path),
-                     "-ac",
-                     "1",
-                     "-ar",
-                     "48000",
-                     "-c:a",
-                     "libopus",
-                     str(ogg_path),
-                 ],
-                 check=True,
-                 stdout=subprocess.DEVNULL,
-                 stderr=subprocess.DEVNULL,
-             )
-         except subprocess.CalledProcessError:
-             # если конвертация не удалась — логируем и кидаем 500
-             raise HTTPException(
-                 status_code=500,
-                 detail="Ошибка обработки аудио (ffmpeg). Попробуйте ещё раз или позже.",
-             )
- 
-     # --- 3. Распознаём речь по ogg через SpeechKit ---
-     raw_text = transcribe_audio_with_speechkit(str(ogg_path))
-     normalized_text, sentiment = normalize_and_analyze_with_yandex_gpt(
-         raw_text,
--        normalization_prompt=company.prompt,
-+        normalization_prompt=company.prompt or load_normalization_prompt(),
-     )
- 
-     # --- 4. Сохраняем отзыв (можно хранить путь к исходному файлу или к ogg) ---
-     review = Review(
-         company_id=company.id,
-         user_name=user_name,
-         audio_path=str(orig_path),  # исходник (webm или ogg) — для истории
-         raw_text=raw_text,
-         normalized_text=normalized_text,
-         sentiment=sentiment,
-         status="draft",
-     )
-     db.add(review)
-     db.commit()
-     db.refresh(review)
- 
-     return {
-         "review_id": review.id,
-         "raw_text": raw_text,
-         "normalized_text": normalized_text,
-         "sentiment": sentiment,
+diff --git a/templates/public_form.html b/templates/public_form.html
+index 4bd62bbd763017e3b3491b27a5f045fa2c931303..520accdb0f095467af2b4b68acf65f997a9eca16 100644
+--- a/templates/public_form.html
++++ b/templates/public_form.html
+@@ -1,153 +1,197 @@
+ <!DOCTYPE html>
+ <html lang="ru">
+ <head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <title>Оставить голосовой отзыв — {{ company.name }}</title>
+   <style>
+     :root {
+-      --bg: #f5f6fb;
+-      --card: #ffffff;
+-      --border: #e5e7eb;
+-      --muted: #6b7280;
+-      --text: #0f172a;
+-      --primary: #2563eb;
+-      --primary-hover: #1d4ed8;
++      --bg-start: #efe4ff;
++      --bg-end: #d9c2ff;
++      --card: rgba(255, 255, 255, 0.9);
++      --border: #b388ff;
++      --muted: #4a3b63;
++      --text: #2c1f3a;
++      --primary: #7b33c8;
++      --primary-hover: #652aa4;
      }
+     body {
+       font-family: 'Inter', system-ui, -apple-system, sans-serif;
+       margin: 0;
+       min-height: 100vh;
+-      background: radial-gradient(circle at 0% 0%, #dbeafe 0, rgba(219,234,254,0) 35%),
+-                  radial-gradient(circle at 100% 20%, #c7d2fe 0, rgba(199,210,254,0) 30%),
+-                  var(--bg);
++      background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
+       color: var(--text);
+       padding: 24px;
+       box-sizing: border-box;
++      display: flex;
++      justify-content: center;
++      align-items: flex-start;
+     }
+     .container {
+       max-width: 760px;
++      width: 100%;
+       margin: 0 auto 32px;
+     }
+     .card {
+       background: var(--card);
+       border-radius: 14px;
+       padding: 20px;
+-      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+-      border: 1px solid var(--border);
++      box-shadow: 0 14px 36px rgba(82, 0, 109, 0.15);
++      border: 2px solid var(--border);
+       margin-top: 16px;
+     }
+     h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
+     h2 { margin: 0 0 12px; font-size: 20px; }
+-    p { margin: 6px 0 12px; color: var(--muted); }
++    p { margin: 6px 0 12px; color: var(--muted); line-height: 1.5; }
+     .logo {
+       max-height: 90px;
+       margin: 12px 0 4px;
+-    }    .step { display: none; }
++    }
++    .step { display: none; }
+     .step.active { display: block; }
+     .input-group { margin: 10px 0 16px; }
+-    label { font-weight: 600; display: block; margin-bottom: 6px; color: #1f2937; }
++    label { font-weight: 700; display: block; margin-bottom: 8px; color: var(--text); }
+     input[type="text"], textarea {
+       width: 100%;
+       border-radius: 12px;
+-      border: 1px solid var(--border);
+-      padding: 12px 14px;
++      border: 2px solid var(--border);
++      padding: 14px 16px;
+       font-size: 15px;
+       box-sizing: border-box;
+-      background: #f8fafc;
++      background: rgba(255, 255, 255, 0.9);
+       transition: border-color 0.15s, box-shadow 0.15s;
+     }
+     input:focus, textarea:focus {
+       outline: none;
+       border-color: var(--primary);
+-      box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
++      box-shadow: 0 0 0 4px rgba(123, 51, 200, 0.25);
+       background: #fff;
+     }
+     textarea { min-height: 160px; resize: vertical; }
+-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
++    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+     .btn {
+       padding: 10px 16px;
+-      border: none;
++      border: 2px solid var(--primary);
+       border-radius: 12px;
+       cursor: pointer;
+       font-weight: 700;
+       color: #fff;
+       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+-      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+-      transition: transform 0.1s ease, box-shadow 0.2s ease;
++      box-shadow: 0 12px 30px rgba(101, 42, 164, 0.25);
++      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+     }
+     .btn.secondary {
+-      background: #6b7280;
+-      box-shadow: none;
++      background: linear-gradient(135deg, #9a88c7, #7b33c8);
++      border-color: #9a88c7;
++      box-shadow: 0 10px 26px rgba(122, 102, 176, 0.2);
+     }
+     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+     .btn:hover:not(:disabled) { transform: translateY(-1px); }
+     .info-box {
+-      background: #eef2ff;
+-      color: #4338ca;
+-      border: 1px solid #c7d2fe;
+-      padding: 10px 12px;
+-      border-radius: 10px;
++      background: rgba(123, 51, 200, 0.08);
++      color: #4a2c7b;
++      border: 1px solid rgba(123, 51, 200, 0.25);
++      padding: 12px 14px;
++      border-radius: 12px;
+       font-size: 14px;
+       margin-top: 8px;
+     }
+     .status { margin-top: 8px; font-size: 14px; color: var(--muted); }
  
- 
- @app.post("/api/public/reviews/{review_id}/finalize")
-diff --git a/templates/admin_dashboard.html b/templates/admin_dashboard.html
-index b8350ee641c105a5df509f9767cd3acc5ee875c0..d5d8d89e2d31b3b5d59ce07c56b079b0a9cf69dc 100644
---- a/templates/admin_dashboard.html
-+++ b/templates/admin_dashboard.html
-@@ -208,51 +208,55 @@
-     @media (max-width: 900px) {
-       body { padding: 20px; }
-       h1 { font-size: 24px; }
-       h2 { font-size: 18px; }
++    .mic-wrapper {
++      display: flex;
++      justify-content: center;
++      margin: 18px 0 6px;
++    }
++    .mic-button {
++      width: 140px;
++      height: 140px;
++      border-radius: 50%;
++      border: none;
++      display: grid;
++      place-items: center;
++      background: linear-gradient(145deg, var(--primary), var(--primary-hover));
++      color: #fff;
++      box-shadow: 0 20px 40px rgba(101, 42, 164, 0.3);
++      cursor: pointer;
++      transition: transform 0.3s ease, box-shadow 0.3s ease;
++    }
++    .mic-button svg {
++      width: 56px;
++      height: 56px;
++    }
++    .mic-button:hover { transform: translateY(-2px); }
++    .mic-button.recording {
++      animation: pulse 1.6s ease-in-out infinite;
++      box-shadow: 0 24px 60px rgba(123, 51, 200, 0.4);
++    }
++    @keyframes pulse {
++      0% { transform: scale(1); }
++      50% { transform: scale(1.08); }
++      100% { transform: scale(1); }
++    }
++
+     @media (max-width: 640px) {
+       body { padding: 16px; }
+       .container { margin-bottom: 24px; }
        .card { padding: 16px; }
-       .flex { flex-direction: column; align-items: flex-start; }
-       .row-actions { flex-direction: column; align-items: stretch; }
-       .row-actions button { width: 100%; }
-       .row-actions input { width: 100%; }
-       .table-wrapper { margin: 0 -6px; padding: 0 6px; }
-       table { min-width: 640px; }
+       h1 { font-size: 22px; line-height: 1.2; }
+       h2 { font-size: 18px; }
+       .logo { max-height: 72px; max-width: 100%; height: auto; }
+       .btn-row { flex-direction: column; align-items: stretch; }
+       .btn { width: 100%; text-align: center; }
+       textarea { min-height: 120px; }
++      .mic-button { width: 120px; height: 120px; }
      }
    </style>
  </head>
  <body>
-   <h1>Админ-панель Voice Feedback</h1>
-   <p class="muted">
-     Здесь можно создавать компании, получать ссылки/QR-коды и работать с отзывами.
-   </p>
+   <div class="container">
+     {% if company.logo_path %}
+       {% set logo_src = company.logo_path %}
+       {% if logo_src.startswith('/') %}
+         {% set logo_src = '/voice-feedback' ~ logo_src %}
+       {% endif %}
+       <img src="{{ logo_src }}" alt="Логотип" class="logo">
+     {% endif %}      
+     <h1>Отзыв для {{ company.name }}</h1>
+     <p>Запишите короткий отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
+     <div class="card step active" id="step1">
+       <h2>Шаг 1. Запишите голосовой отзыв</h2>
+       <div class="input-group">
+         <label for="userName">Ваше имя (или ник)</label>
+-        <input type="text" id="userName" placeholder="Иван">
++        <input type="text" id="userName" placeholder="Введите ваше имя">
+       </div>
+-      <div class="btn-row">
+-        <button id="startBtn" class="btn" type="button">Начать запись</button>
+-        <button id="stopBtn" class="btn secondary" type="button" disabled>Остановить</button>
++      <div class="mic-wrapper">
++        <button id="startBtn" class="mic-button" type="button" aria-label="Записать отзыв">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
++            <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" />
++            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
++            <line x1="12" x2="12" y1="19" y2="22" />
++          </svg>
++        </button>
+       </div>
+       <div class="info-box">Запись делается через микрофон устройства. Не закрывайте вкладку, пока идёт запись.</div>
+       <p id="recordStatus" class="status"></p>
+     </div>
  
-   <div class="card">
-     <h2>Промпт для нейросети</h2>
-     <p class="muted" style="margin-top: -4px;">
-       Используется по умолчанию для всех компаний.
-     </p>
--    <textarea rows="9" readonly>{{ normalization_prompt }}</textarea>
-+    <textarea id="normalizationPrompt" rows="9">{{ normalization_prompt }}</textarea>
-+    <div class="flex" style="margin-top: 10px;">
-+      <button id="savePrompt" type="button">Сохранить</button>
-+      <span id="promptStatus" class="status"></span>
-+    </div>
-   </div>
- 
-   <!-- Блок создания компании -->
-   <div class="card">
-     <h2>Создать компанию</h2>
-     <form id="createCompanyForm">
-       <label>
-         Название компании
-         <input type="text" id="companyName" required />
-       </label>
-       <label>
-         Slug (для URL, латиница, без пробелов, например <code>beauty-salon-lux</code>)
-         <input type="text" id="companySlug" required />
-       </label>
-       <label>
-         Email (куда отправлять отзывы)
-         <input type="email" id="companyEmail" required />
-       </label>
-       <button type="submit">Создать компанию</button>
-       <span id="createStatus" class="status"></span>
-     </form>
-   </div>
- 
-   <!-- Список компаний -->
-   <div class="card">
-@@ -273,50 +277,54 @@
-       Скачать все отзывы (CSV)
-     </button>
-     <span class="muted" style="margin-left: 8px;">или скачай по компании из таблицы.</span>
-   </div>
- 
-   <div id="qrModal" class="modal-backdrop">
-     <div class="modal-card">
-       <h3>QR-код</h3>
-       <img id="qrModalImg" src="" alt="QR код">
-       <div style="margin-top: 12px;">
-         <button id="closeQrModal" class="secondary small" type="button">Закрыть</button>
+     <div class="card step" id="step2">
+       <h2>Шаг 2. Проверка текста</h2>
+       <p><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
+       <p><strong>Текст, который понял ИИ:</strong></p>
+       <div class="info-box" id="aiText"></div>
+       <div class="btn-row">
+         <button id="editBtn" class="btn" type="button">Редактировать и отправить</button>
+         <button class="btn secondary" type="button" onclick="showStep(1)">Записать ещё раз</button>
        </div>
      </div>
-   </div>
-   
-   <script>
-     // Важно: сервис висит под /voice-feedback/, поэтому префикс:
-     const BASE = '/voice-feedback';
  
-     const createForm = document.getElementById('createCompanyForm');
-     const nameInput = document.getElementById('companyName');
-     const slugInput = document.getElementById('companySlug');
-     const emailInput = document.getElementById('companyEmail');
-     const createStatus = document.getElementById('createStatus');
+     <div class="card step" id="step3">
+       <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
+       <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..."></textarea>
+       <div class="btn-row">
+         <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
+         <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
+       </div>
+       <p id="sendStatus" class="status"></p>
+     </div>
+@@ -158,128 +202,136 @@
+     const companySlug = "{{ company.slug }}";
  
-+    const promptTextarea = document.getElementById('normalizationPrompt');
-+    const savePromptBtn = document.getElementById('savePrompt');
-+    const promptStatus = document.getElementById('promptStatus');
-+
-     const companiesContainer = document.getElementById('companiesContainer');
-     const refreshBtn = document.getElementById('refreshCompanies');
-     const downloadAllCsvBtn = document.getElementById('downloadAllCsv');
+     let mediaRecorder;
+     let recorderMime;
+     let audioChunks = [];
+     let useFallback = false;
+     let fallbackContext = null;
+     let fallbackProcessor = null;
+     let fallbackSource = null;
+     let fallbackStream = null;
+     let fallbackBuffers = [];
+     let reviewId = null;
+     let normalizedText = "";
  
-     let companies = [];
+     const step1 = document.getElementById("step1");
+     const step2 = document.getElementById("step2");
+     const step3 = document.getElementById("step3");
  
-     async function loadCompanies() {
-       companiesContainer.textContent = 'Загрузка...';
-       try {
-         const res = await fetch(`${BASE}/api/admin/companies`);
-         if (!res.ok) throw new Error('Ошибка загрузки компаний');
-         companies = await res.json();
-         renderCompanies();
-       } catch (e) {
-         companiesContainer.textContent = 'Не удалось загрузить список компаний.';
-         console.error(e);
-       }
+     function showStep(n) {
+       [step1, step2, step3].forEach((el, i) => {
+         el.classList.toggle("active", i === (n-1));
+       });
      }
  
-     function renderCompanies() {
-       if (!companies.length) {
-         companiesContainer.textContent = 'Компаний пока нет.';
+     const startBtn = document.getElementById("startBtn");
+-    const stopBtn = document.getElementById("stopBtn");
+     const recordStatus = document.getElementById("recordStatus");
+     const userNameInput = document.getElementById("userName");
+     const aiText = document.getElementById("aiText");
+     const sentimentSpan = document.getElementById("sentimentSpan");
+     const editBtn = document.getElementById("editBtn");
+     const finalText = document.getElementById("finalText");
+     const sendBtn = document.getElementById("sendBtn");
+     const sendStatus = document.getElementById("sendStatus");
+ 
++    let isRecording = false;
++
+     startBtn.onclick = async () => {
++      if (isRecording) {
++        stopRecording();
++        return;
++      }
++
+       audioChunks = [];
+       fallbackBuffers = [];
+       useFallback = false;
+ 
+       if (typeof MediaRecorder === 'undefined') {
+         await startFallbackRecorder();
          return;
        }
  
-@@ -518,31 +526,52 @@
-         await res.json();
-         createStatus.textContent = 'Компания создана.';
-         nameInput.value = '';
-         slugInput.value = '';
-         emailInput.value = '';
-         await loadCompanies();
+       let preferredMime = null;
+ 
+       try {
+         // 1. Пробуем ogg/opus (идеальный вариант для SpeechKit)
+         if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+           preferredMime = 'audio/ogg;codecs=opus';
+         } else if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
+           // иногда браузеры чувствительны к пробелам
+           preferredMime = 'audio/ogg; codecs=opus';
+         }
+ 
+         // 2. Если ogg не поддерживается — пробуем webm/opus (часто так в Chrome)
+         if (!preferredMime) {
+           if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+             preferredMime = 'audio/webm;codecs=opus';
+           } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+             preferredMime = 'audio/webm';
+           }
+         }
+ 
+         // 3. Если ни один формат не подошёл — включаем ручной рекордер
+         if (!preferredMime) {
+           await startFallbackRecorder();
+           return;
+         }
+ 
+         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+ 
+         recorderMime = preferredMime;
+ 
+         mediaRecorder = new MediaRecorder(stream, { mimeType: recorderMime });
+         mediaRecorder.ondataavailable = (e) => {
+           audioChunks.push(e.data);
+         };
+         mediaRecorder.onstop = onRecordStop;
+         mediaRecorder.start();
+         recordStatus.textContent = "Запись идёт...";
+-        startBtn.disabled = true;
+-        stopBtn.disabled = false;
++        startBtn.classList.add("recording");
++        isRecording = true;
        } catch (e) {
          console.error(e);
-         createStatus.textContent = 'Ошибка сети при создании компании.';
+         await startFallbackRecorder();
        }
      };
  
-     refreshBtn.onclick = () => loadCompanies();
- 
-     downloadAllCsvBtn.onclick = () => {
-       const url = `${BASE}/api/admin/reviews/export`;
-       window.open(url, '_blank');
-     };
- 
-     document.getElementById('closeQrModal').onclick = closeQrModal;
-     document.getElementById('qrModal').addEventListener('click', (e) => {
-       if (e.target.id === 'qrModal') {
-         closeQrModal();
+-    stopBtn.onclick = () => {
++    function stopRecording() {
+       if (useFallback) {
+         stopFallbackRecorder();
+       } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
+         mediaRecorder.stop();
        }
-     });
--    
-+
-+    savePromptBtn.onclick = async () => {
-+      promptStatus.textContent = '';
-+      savePromptBtn.disabled = true;
-+      try {
-+        const res = await fetch(`${BASE}/api/admin/prompt`, {
-+          method: 'PATCH',
-+          headers: { 'Content-Type': 'application/json' },
-+          body: JSON.stringify({ prompt: promptTextarea.value })
-+        });
-+        if (!res.ok) throw new Error('Ошибка сохранения промпта');
-+        const data = await res.json();
-+        promptTextarea.value = data.prompt || '';
-+        promptStatus.textContent = 'Сохранено';
-+      } catch (e) {
-+        console.error(e);
-+        promptStatus.textContent = 'Не удалось сохранить промпт';
-+      } finally {
-+        savePromptBtn.disabled = false;
-+      }
-+    };
-+
-     // начальная загрузка
-     loadCompanies();
-   </script>
- </body>
- </html>
+-      stopBtn.disabled = true;
+-      startBtn.disabled = false;
+       recordStatus.textContent = "Обработка записи...";
+-    };
++      startBtn.classList.remove("recording");
++      isRecording = false;
++    }
+ 
+     async function onRecordStop() {
+       const blob = new Blob(audioChunks, { type: recorderMime || "audio/webm" });
++      startBtn.classList.remove("recording");
++      isRecording = false;
+       await uploadAudioBlob(blob, recorderMime || "audio/webm");
+     }
+ 
+     async function uploadAudioBlob(blob, mimeType) {
+       const formData = new FormData();
+ 
+       let filename = "record.webm";
+ 
+       if (mimeType && mimeType.startsWith("audio/ogg")) {
+         filename = "record.ogg";
+       } else if (mimeType && mimeType.startsWith("audio/wav")) {
+         filename = "record.wav";
+       }
+ 
+       formData.append("audio", blob, filename);
+       formData.append("user_name", userNameInput.value || "");
+ 
+       recordStatus.textContent = "Обработка записи...";
+ 
+       const res = await fetch(`${BASE}/api/public/${companySlug}/upload-audio`, {
+         method: "POST",
+         body: formData
+       });
+ 
+       if (!res.ok) {
+@@ -298,84 +350,86 @@
+     }
+ 
+     async function startFallbackRecorder() {
+       try {
+         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+ 
+         fallbackContext = new AudioContextClass();
+         fallbackStream = stream;
+ 
+         fallbackSource = fallbackContext.createMediaStreamSource(stream);
+         fallbackProcessor = fallbackContext.createScriptProcessor(4096, 1, 1);
+         const silentGain = fallbackContext.createGain();
+         silentGain.gain.value = 0;
+ 
+         fallbackProcessor.onaudioprocess = (event) => {
+           fallbackBuffers.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+         };
+ 
+         fallbackSource.connect(fallbackProcessor);
+         fallbackProcessor.connect(silentGain);
+         silentGain.connect(fallbackContext.destination);
+ 
+         useFallback = true;
+         recordStatus.textContent = "Запись идёт...";
+-        startBtn.disabled = true;
+-        stopBtn.disabled = false;
++        startBtn.classList.add("recording");
++        isRecording = true;
+       } catch (error) {
+         console.error(error);
+         recordStatus.textContent = "Не удалось получить доступ к микрофону.";
+       }
+     }
+ 
+     function stopFallbackRecorder() {
+       if (!fallbackContext || !fallbackProcessor) {
+         recordStatus.textContent = "Не удалось завершить запись.";
+         return;
+       }
+ 
+       fallbackProcessor.disconnect();
+       if (fallbackSource) fallbackSource.disconnect();
+ 
+       if (fallbackStream) {
+         fallbackStream.getTracks().forEach((track) => track.stop());
+       }
+ 
+       const wavBlob = encodeWAV(fallbackBuffers, fallbackContext.sampleRate);
+ 
+       fallbackBuffers = [];
+ 
+       if (fallbackContext && typeof fallbackContext.close === 'function') {
+         fallbackContext.close();
+       }
+ 
+       fallbackContext = null;
+       fallbackProcessor = null;
+       fallbackSource = null;
+       fallbackStream = null;
+ 
++      startBtn.classList.remove("recording");
++      isRecording = false;
+       uploadAudioBlob(wavBlob, "audio/wav");
+     }
+ 
+     function encodeWAV(buffers, sampleRate) {
+       const totalLength = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
+       const wavBuffer = new ArrayBuffer(44 + totalLength * 2);
+       const view = new DataView(wavBuffer);
+ 
+       // RIFF chunk descriptor
+       writeString(view, 0, 'RIFF');
+       view.setUint32(4, 36 + totalLength * 2, true);
+       writeString(view, 8, 'WAVE');
+ 
+       // fmt sub-chunk
+       writeString(view, 12, 'fmt ');
+       view.setUint32(16, 16, true); // Subchunk1Size
+       view.setUint16(20, 1, true); // AudioFormat (PCM)
+       view.setUint16(22, 1, true); // NumChannels
+       view.setUint32(24, sampleRate, true); // SampleRate
+       view.setUint32(28, sampleRate * 2, true); // ByteRate
+       view.setUint16(32, 2, true); // BlockAlign
+       view.setUint16(34, 16, true); // BitsPerSample
+ 
+       // data sub-chunk
+       writeString(view, 36, 'data');
