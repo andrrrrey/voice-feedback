@@ -45,7 +45,8 @@
     p { margin: 6px 0 12px; color: var(--muted); line-height: 1.5; }
     .logo {
       max-height: 90px;
-      margin: 12px 0 4px;
+      margin: 12px auto 4px;
+      display: block;
     }
     .step { display: none; }
     .step.active { display: block; }
@@ -132,14 +133,16 @@
     }
 
     @media (max-width: 640px) {
-      body { padding: 16px; }
-      .container { margin-bottom: 24px; }
-      .card { padding: 16px; }
+      body { padding: 16px; align-items: center; text-align: center; }
+      .container { margin-bottom: 24px; text-align: center; }
+      .card { padding: 16px; text-align: center; }
       h1 { font-size: 22px; line-height: 1.2; }
       h2 { font-size: 18px; }
-      .logo { max-height: 72px; max-width: 100%; height: auto; }
+      p, label, .info-box, .status { text-align: center; }
+      .btn-row { flex-direction: column; align-items: stretch; justify-content: center; }
       .btn-row { flex-direction: column; align-items: stretch; }
       .btn { width: 100%; text-align: center; }
+      textarea, input[type="text"] { text-align: left; }
       textarea { min-height: 120px; }
       .mic-button { width: 120px; height: 120px; }
     }
