@@ -6,14 +6,14 @@
   <title>Оставить голосовой отзыв — {{ company.name }}</title>
   <style>
     :root {
-      --bg-start: #efe4ff;
-      --bg-end: #d9c2ff;
+      --bg-start: #dccada;
+      --bg-end: #ffffff;
       --card: rgba(255, 255, 255, 0.9);
       --border: #b388ff;
       --muted: #4a3b63;
       --text: #2c1f3a;
-      --primary: #7b33c8;
-      --primary-hover: #652aa4;
+      --primary: #7d3b73;
+      --primary-hover: #6b2f63;
     }
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -57,7 +57,7 @@
       border-radius: 12px;
       border: 2px solid var(--border);
       padding: 14px 16px;
-      font-size: 15px;
+      font-size: 22.5px;
       box-sizing: border-box;
       background: rgba(255, 255, 255, 0.9);
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -65,10 +65,11 @@
     input:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(123, 51, 200, 0.25);
+      box-shadow: 0 0 0 4px rgba(125, 59, 115, 0.25);
       background: #fff;
     }
-    textarea { min-height: 160px; resize: vertical; }
+    input::placeholder { font-size: 22.5px; }
+    textarea { min-height: 160px; resize: vertical; font-size: 22.5px; }
     .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
     .btn {
       padding: 10px 16px;
@@ -76,22 +77,23 @@
       border-radius: 12px;
       cursor: pointer;
       font-weight: 700;
+      font-size: 1.5rem;
       color: #fff;
       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      box-shadow: 0 12px 30px rgba(101, 42, 164, 0.25);
+      box-shadow: 0 12px 30px rgba(109, 47, 99, 0.25);
       transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
     }
     .btn.secondary {
-      background: linear-gradient(135deg, #9a88c7, #7b33c8);
-      border-color: #9a88c7;
-      box-shadow: 0 10px 26px rgba(122, 102, 176, 0.2);
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      border-color: var(--primary);
+      box-shadow: 0 10px 26px rgba(109, 47, 99, 0.2);
     }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn:hover:not(:disabled) { transform: translateY(-1px); }
     .info-box {
-      background: rgba(123, 51, 200, 0.08);
-      color: #4a2c7b;
-      border: 1px solid rgba(123, 51, 200, 0.25);
+      background: rgba(125, 59, 115, 0.08);
+      color: #4d2a45;
+      border: 1px solid rgba(125, 59, 115, 0.25);
       padding: 12px 14px;
       border-radius: 12px;
       font-size: 14px;
@@ -113,9 +115,15 @@
       place-items: center;
       background: linear-gradient(145deg, var(--primary), var(--primary-hover));
       color: #fff;
-      box-shadow: 0 20px 40px rgba(101, 42, 164, 0.3);
+      box-shadow: 0 20px 40px rgba(109, 47, 99, 0.3);
       cursor: pointer;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .mic-button .mic-text {
+      display: none;
+      font-size: 26px;
+      font-weight: 700;
+      text-transform: lowercase;
     }
     .mic-button svg {
       width: 56px;
@@ -124,8 +132,11 @@
     .mic-button:hover { transform: translateY(-2px); }
     .mic-button.recording {
       animation: pulse 1.6s ease-in-out infinite;
-      box-shadow: 0 24px 60px rgba(123, 51, 200, 0.4);
+      box-shadow: 0 24px 60px rgba(109, 47, 99, 0.4);
     }
+    .mic-button.recording svg { display: none; }
+    .mic-button.recording .mic-text { display: block; }
+    .sentiment-row { display: none; }
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.08); }
@@ -172,6 +183,7 @@
             <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
             <line x1="12" x2="12" y1="19" y2="22" />
           </svg>
+          <span class="mic-text">стоп</span>
         </button>
       </div>
       <div class="info-box">Запись делается через микрофон устройства. Не закрывайте вкладку, пока идёт запись.</div>
@@ -180,9 +192,9 @@
 
     <div class="card step" id="step2">
       <h2>Шаг 2. Проверка текста</h2>
-      <p><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
+      <p class="sentiment-row"><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
       <p><strong>Текст, который понял ИИ:</strong></p>
-      <div class="info-box" id="aiText"></div>
+      <div class="info-box" id="aiText" style="font-size: 1.5rem;"></div>
       <div class="btn-row">
         <button id="editBtn" class="btn" type="button">Редактировать и отправить</button>
         <button class="btn secondary" type="button" onclick="showStep(1)">Записать ещё раз</button>
@@ -191,7 +203,7 @@
 
     <div class="card step" id="step3">
       <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
-      <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..."></textarea>
+      <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..." style="font-size: 1.5rem;"></textarea>
       <div class="btn-row">
         <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
         <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>

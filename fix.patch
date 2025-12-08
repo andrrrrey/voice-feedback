@@ -1,489 +1,255 @@
-diff --git a/templates/admin_dashboard.html b/templates/admin_dashboard.html
-index d5d8d89e2d31b3b5d59ce07c56b079b0a9cf69dc..36fbb1d9e1e9b9976f99cb327004b5b334e09089 100644
---- a/templates/admin_dashboard.html
-+++ b/templates/admin_dashboard.html
-@@ -1,191 +1,191 @@
+diff --git a/templates/public_form.html b/templates/public_form.html
+index 254ddb10c0a3f9a5a997940e33283e68217d5d59..31a1677c0caf8c5bfa74f29fe04b2e619edb1b36 100644
+--- a/templates/public_form.html
++++ b/templates/public_form.html
+@@ -1,219 +1,231 @@
  <!DOCTYPE html>
  <html lang="ru">
  <head>
-   <meta charset="UTF-8" />
-   <meta name="viewport" content="width=device-width, initial-scale=1" />
-   <title>Админ — панель</title>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <title>Оставить голосовой отзыв — {{ company.name }}</title>
    <style>
      :root {
--      --bg: #f5f6fb;
--      --card: #ffffff;
--      --border: #e5e7eb;
--      --muted: #6b7280;
--      --text: #0f172a;
--      --primary: #2563eb;
--      --primary-hover: #1d4ed8;
-+      --bg-start: #efe4ff;
-+      --bg-end: #d9c2ff;
-+      --card: rgba(255, 255, 255, 0.95);
-+      --border: #b388ff;
-+      --muted: #4a3b63;
-+      --text: #2c1f3a;
-+      --primary: #7b33c8;
-+      --primary-hover: #652aa4;
+-      --bg-start: #efe4ff;
+-      --bg-end: #d9c2ff;
++      --bg-start: #dccada;
++      --bg-end: #ffffff;
+       --card: rgba(255, 255, 255, 0.9);
+       --border: #b388ff;
+       --muted: #4a3b63;
+       --text: #2c1f3a;
+-      --primary: #7b33c8;
+-      --primary-hover: #652aa4;
++      --primary: #7d3b73;
++      --primary-hover: #6b2f63;
      }
      body {
--      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-       max-width: 1040px;
-       margin: 0 auto;
-       padding: 28px;
--      background: radial-gradient(circle at 0% 0%, #dbeafe 0, rgba(219,234,254,0) 35%),
--                  radial-gradient(circle at 85% 10%, #c7d2fe 0, rgba(199,210,254,0) 30%),
--                  var(--bg);
-+      background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
+       font-family: 'Inter', system-ui, -apple-system, sans-serif;
+       margin: 0;
+       min-height: 100vh;
+       background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
        color: var(--text);
+       padding: 24px;
+       box-sizing: border-box;
+       display: flex;
+       justify-content: center;
+       align-items: flex-start;
      }
-     h1 {
-       margin-bottom: 8px;
-       letter-spacing: -0.01em;
-     }
-     h2 {
-       margin-top: 0;
-       margin-bottom: 10px;
-       letter-spacing: -0.01em;
+     .container {
+       max-width: 760px;
+       width: 100%;
+       margin: 0 auto 32px;
      }
      .card {
        background: var(--card);
        border-radius: 14px;
-       padding: 18px 18px 20px;
-       margin-bottom: 16px;
--      box-shadow: 0 10px 36px rgba(15, 23, 42, 0.08);
--      border: 1px solid rgba(37, 99, 235, 0.08);
-+      box-shadow: 0 14px 36px rgba(82, 0, 109, 0.15);
-+      border: 2px solid var(--border);
+       padding: 20px;
+       box-shadow: 0 14px 36px rgba(82, 0, 109, 0.15);
+       border: 2px solid var(--border);
+       margin-top: 16px;
      }
-     label {
+     h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
+     h2 { margin: 0 0 12px; font-size: 20px; }
+     p { margin: 6px 0 12px; color: var(--muted); line-height: 1.5; }
+     .logo {
+       max-height: 90px;
+       margin: 12px auto 4px;
        display: block;
-       margin-bottom: 10px;
-       font-weight: 600;
-       color: #111827;
      }
-     input[type="text"],
-     input[type="email"],
-     textarea {
+     .step { display: none; }
+     .step.active { display: block; }
+     .input-group { margin: 10px 0 16px; }
+     label { font-weight: 700; display: block; margin-bottom: 8px; color: var(--text); }
+     input[type="text"], textarea {
        width: 100%;
-       padding: 11px 12px;
-       border-radius: 10px;
--      border: 1px solid var(--border);
-+      border: 2px solid var(--border);
+       border-radius: 12px;
+       border: 2px solid var(--border);
+       padding: 14px 16px;
+-      font-size: 15px;
++      font-size: 22.5px;
        box-sizing: border-box;
-       margin-top: 6px;
--      background: linear-gradient(135deg, #f8fafc, #eef2ff);
-+      background: rgba(255, 255, 255, 0.9);
-       transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-       font-size: 14px;
+       background: rgba(255, 255, 255, 0.9);
+       transition: border-color 0.15s, box-shadow 0.15s;
      }
-     input[type="text"]:focus,
-     input[type="email"]:focus,
-     textarea:focus {
+     input:focus, textarea:focus {
        outline: none;
        border-color: var(--primary);
--      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.16);
-+      box-shadow: 0 0 0 4px rgba(123, 51, 200, 0.25);
+-      box-shadow: 0 0 0 4px rgba(123, 51, 200, 0.25);
++      box-shadow: 0 0 0 4px rgba(125, 59, 115, 0.25);
        background: #fff;
      }
-     button {
+-    textarea { min-height: 160px; resize: vertical; }
++    input::placeholder { font-size: 22.5px; }
++    textarea { min-height: 160px; resize: vertical; font-size: 22.5px; }
+     .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+     .btn {
        padding: 10px 16px;
-       border-radius: 10px;
-       border: none;
+       border: 2px solid var(--primary);
+       border-radius: 12px;
        cursor: pointer;
-       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+       font-weight: 700;
++      font-size: 1.5rem;
        color: #fff;
-       font-size: 14px;
-       font-weight: 700;
-       transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
--      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.2);
-+      box-shadow: 0 12px 30px rgba(101, 42, 164, 0.25);
+       background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+-      box-shadow: 0 12px 30px rgba(101, 42, 164, 0.25);
++      box-shadow: 0 12px 30px rgba(109, 47, 99, 0.25);
+       transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
      }
-     button.secondary {
--      background: #6b7280;
--      box-shadow: none;
-+      background: linear-gradient(135deg, #9a88c7, #7b33c8);
-+      border: 1px solid rgba(154, 136, 199, 0.5);
-+      box-shadow: 0 10px 26px rgba(122, 102, 176, 0.2);
+     .btn.secondary {
+-      background: linear-gradient(135deg, #9a88c7, #7b33c8);
+-      border-color: #9a88c7;
+-      box-shadow: 0 10px 26px rgba(122, 102, 176, 0.2);
++      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
++      border-color: var(--primary);
++      box-shadow: 0 10px 26px rgba(109, 47, 99, 0.2);
      }
-     button.danger {
-       background: #dc2626;
-       box-shadow: none;
-     }
-     button.small {
-       padding: 6px 10px;
-       font-size: 12px;
-     }
-     button:disabled {
-       opacity: 0.55;
-       cursor: default;
-       box-shadow: none;
-     }
-     button:hover:not(:disabled) { filter: brightness(1.03); transform: translateY(-1px); }
-     button:active:not(:disabled) { transform: translateY(0); box-shadow: 0 8px 22px rgba(37, 99, 235, 0.22); }
-     table {
-       width: 100%;
-       border-collapse: collapse;
-       margin-top: 12px;
--      border: 1px solid #e5e7eb;
-+      border: 2px solid var(--border);
-       border-radius: 12px;
-       overflow: hidden;
-       background: #fff;
--      box-shadow: inset 0 1px 0 #f3f4f6;
-+      box-shadow: inset 0 1px 0 rgba(123, 51, 200, 0.08);
-     }
-     .table-wrapper {
-       width: 100%;
-       overflow-x: auto;
-       border-radius: 12px;
-     }
-     .table-wrapper table { min-width: 720px; }
-     th, td {
-       padding: 10px 12px;
-       border-bottom: 1px solid #e5e7eb;
-       font-size: 14px;
-       vertical-align: top;
-     }
-     th {
-       text-align: left;
--      background: #f8fafc;
--      color: #111827;
-+      background: rgba(123, 51, 200, 0.08);
-+      color: #2c1f3a;
-       font-weight: 700;
-     }
-     tbody tr:hover { background: #f9fafb; }
-     .muted {
-       color: var(--muted);
-       font-size: 13px;
-     }
-     .status {
-       font-size: 13px;
-       margin-top: 4px;
-       color: var(--muted);
-     }
-     .tag {
-       display: inline-block;
-       padding: 3px 7px;
-       border-radius: 999px;
--      background: #e0e7ff;
-+      background: rgba(123, 51, 200, 0.1);
-       font-size: 11px;
-       margin-right: 6px;
--      color: #312e81;
-+      color: #4a2c7b;
-       font-weight: 600;
-     }
-     .row-actions {
-       display: flex;
-       flex-wrap: wrap;
-       gap: 6px;
-       margin-top: 6px;
-     }
-     .logo-preview {
-       max-height: 36px;
-     }
-     .qr-preview {
-       max-height: 56px;
-       cursor: zoom-in;
--      border: 1px solid #e5e7eb;
-+      border: 1px solid var(--border);
-       border-radius: 8px;
-       padding: 4px;
-       background: #fff;
--      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-+      box-shadow: 0 6px 16px rgba(82, 0, 109, 0.15);
-     }
-     .flex {
-       display: flex;
-       gap: 16px;
-       align-items: center;
-       flex-wrap: wrap;
-     }
-     .modal-backdrop {
-       position: fixed;
-       inset: 0;
-       background: rgba(0, 0, 0, 0.55);
-       display: flex;
-       align-items: center;
-       justify-content: center;
-       z-index: 1000;
-       opacity: 0;
-       pointer-events: none;
-       transition: opacity 0.2s ease;
-     }
-     .modal-backdrop.active {
-       opacity: 1;
-       pointer-events: all;
-     }
-     .modal-card {
-       background: #fff;
-diff --git a/templates/admin_login.html b/templates/admin_login.html
-index cf64d08452469114d37889ca8673b5ce5e9c9538..269eae665f0d8944c9107c1e3f6e3957d9198e15 100644
---- a/templates/admin_login.html
-+++ b/templates/admin_login.html
-@@ -1,148 +1,149 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1">
-   <title>Админ — вход</title>
-   <style>
-     :root {
-       color-scheme: light;
--      --bg: #f4f6fb;
--      --card: rgba(255, 255, 255, 0.92);
--      --text: #0f172a;
--      --muted: #6b7280;
--      --primary: #2563eb;
--      --primary-hover: #1d4ed8;
--      --border: #e5e7eb;
--      --shadow: 0 20px 70px rgba(37, 99, 235, 0.18);
-+      --bg-start: #efe4ff;
-+      --bg-end: #d9c2ff;
-+      --card: rgba(255, 255, 255, 0.95);
-+      --text: #2c1f3a;
-+      --muted: #4a3b63;
-+      --primary: #7b33c8;
-+      --primary-hover: #652aa4;
-+      --border: #b388ff;
-+      --shadow: 0 20px 70px rgba(123, 51, 200, 0.26);
-     }
-     body {
-       margin: 0;
-       min-height: 100vh;
-       display: flex;
-       align-items: center;
-       justify-content: center;
--      background: linear-gradient(135deg, #e0e7ff 0%, #f4f6fb 55%, #e5edff 100%);
-+      background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
-       font-family: system-ui, -apple-system, "Inter", sans-serif;
-       color: var(--text);
-       padding: 18px;
-       box-sizing: border-box;
-     }
-     .card {
-       width: min(420px, 92vw);
-       background: var(--card);
-       border-radius: 18px;
-       box-shadow: var(--shadow);
-       padding: 30px 28px;
--      border: 1px solid rgba(37, 99, 235, 0.08);
-+      border: 2px solid var(--border);
-       backdrop-filter: blur(8px);
-     }
-     .eyebrow {
-       display: inline-flex;
-       align-items: center;
-       gap: 8px;
-       padding: 6px 10px;
-       border-radius: 999px;
--      background: #e0e7ff;
--      color: #312e81;
-+      background: rgba(123, 51, 200, 0.12);
-+      color: #4a2c7b;
-       font-weight: 600;
-       font-size: 12px;
-       letter-spacing: 0.01em;
-     }
-     h1 {
-       margin: 10px 0 8px;
-       font-size: 26px;
-       letter-spacing: -0.01em;
-     }
-     p.subtitle {
-       margin: 0 0 20px;
-       color: var(--muted);
-       font-size: 14px;
-       line-height: 1.5;
-     }
-     label {
-       display: block;
-       font-weight: 600;
-       margin-bottom: 6px;
-       font-size: 14px;
--      color: #111827;
-+      color: #2c1f3a;
-     }
-     .field {
-       display: flex;
-       flex-direction: column;
-       gap: 6px;
-       margin-bottom: 16px;
-     }
-     .input-shell {
-       display: flex;
-       align-items: center;
-       border-radius: 12px;
--      border: 1px solid var(--border);
--      background: linear-gradient(135deg, #f8fafc, #eef2ff);
-+      border: 2px solid var(--border);
-+      background: rgba(255, 255, 255, 0.9);
-       padding: 2px 10px 2px 12px;
-       transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-       gap: 8px;
-     }
-     .input-shell svg { flex-shrink: 0; color: #9ca3af; }
-     input[type="text"],
-     input[type="password"] {
-       padding: 12px 4px;
-       border-radius: 10px;
-       border: none;
-       background: transparent;
-       font-size: 15px;
-       width: 100%;
-       color: var(--text);
-     }
-     input:focus { outline: none; }
-     .input-shell:focus-within {
-       border-color: var(--primary);
--      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.16);
-+      box-shadow: 0 0 0 4px rgba(123, 51, 200, 0.2);
-       background: #fff;
-     }
-     .error {
-       color: #b91c1c;
-       background: #fef2f2;
-       border: 1px solid #fecaca;
+     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+     .btn:hover:not(:disabled) { transform: translateY(-1px); }
+     .info-box {
+-      background: rgba(123, 51, 200, 0.08);
+-      color: #4a2c7b;
+-      border: 1px solid rgba(123, 51, 200, 0.25);
++      background: rgba(125, 59, 115, 0.08);
++      color: #4d2a45;
++      border: 1px solid rgba(125, 59, 115, 0.25);
        padding: 12px 14px;
        border-radius: 12px;
        font-size: 14px;
-       margin-bottom: 14px;
-       box-shadow: 0 6px 18px rgba(185, 28, 28, 0.06);
+       margin-top: 8px;
      }
-     button {
-       width: 100%;
-       padding: 13px 16px;
+     .status { margin-top: 8px; font-size: 14px; color: var(--muted); }
+ 
+     .mic-wrapper {
+       display: flex;
+       justify-content: center;
+       margin: 18px 0 6px;
+     }
+     .mic-button {
+       width: 140px;
+       height: 140px;
+       border-radius: 50%;
        border: none;
-       border-radius: 12px;
--      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+       display: grid;
+       place-items: center;
+       background: linear-gradient(145deg, var(--primary), var(--primary-hover));
        color: #fff;
-       font-size: 15px;
-       font-weight: 700;
+-      box-shadow: 0 20px 40px rgba(101, 42, 164, 0.3);
++      box-shadow: 0 20px 40px rgba(109, 47, 99, 0.3);
        cursor: pointer;
--      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
-+      box-shadow: 0 14px 30px rgba(101, 42, 164, 0.25);
-       transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+       transition: transform 0.3s ease, box-shadow 0.3s ease;
      }
-     button:hover { filter: brightness(1.04); transform: translateY(-1px); }
-     button:active { transform: translateY(0); box-shadow: 0 10px 22px rgba(37, 99, 235, 0.26); }
- 
-     @media (max-width: 480px) {
-       .card { padding: 24px 20px; }
-       h1 { font-size: 22px; }
-       .subtitle { font-size: 13px; }
-     }
-   </style>
- </head>
- <body>
-   <div class="card">
-     <div class="eyebrow">Voice Feedback • Admin</div>
-     <h1>Вход в админ-панель</h1>
-     <p class="subtitle">Управляйте компаниями и отслеживайте отзывы в одном месте.</p>
-     {% if error %}
-       <div class="error">{{ error }}</div>
-     {% endif %}
-     <form method="post">
-       <div class="field">
-         <label for="login">Логин</label>
-         <div class="input-shell">
-           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-diff --git a/templates/company_reviews.html b/templates/company_reviews.html
-index 0512def27355b589a586588da7e26f36ddea5aa1..eebcad88e49d67d126c1bab8b668f8bbd84c6992 100644
---- a/templates/company_reviews.html
-+++ b/templates/company_reviews.html
-@@ -1,63 +1,76 @@
- <!DOCTYPE html>
- <html lang="ru">
- <head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1">
-   <title>Отзывы — {{ company.name }}</title>
-   <style>
-+    :root {
-+      --bg-start: #efe4ff;
-+      --bg-end: #d9c2ff;
-+      --card: rgba(255, 255, 255, 0.95);
-+      --border: #b388ff;
-+      --muted: #4a3b63;
-+      --text: #2c1f3a;
-+      --primary: #7b33c8;
-+      --primary-hover: #652aa4;
++    .mic-button .mic-text {
++      display: none;
++      font-size: 26px;
++      font-weight: 700;
++      text-transform: lowercase;
 +    }
-     body {
--      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-       max-width: 960px;
-       margin: 0 auto;
-       padding: 24px;
--      background: #f5f5f7;
--      color: #0f172a;
-+      background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
-+      color: var(--text);
+     .mic-button svg {
+       width: 56px;
+       height: 56px;
      }
--    a { color: #2563eb; text-decoration: none; }
-+    a { color: var(--primary); text-decoration: none; }
-     a:hover { text-decoration: underline; }
-     h1 { margin-bottom: 6px; }
--    .muted { color: #6b7280; font-size: 14px; }
-+    .muted { color: var(--muted); font-size: 14px; }
-     .card {
--      background: #fff;
--      border-radius: 10px;
-+      background: var(--card);
-+      border-radius: 12px;
-       padding: 16px;
--      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-+      box-shadow: 0 14px 36px rgba(82, 0, 109, 0.15);
-+      border: 2px solid var(--border);
-       margin-top: 16px;
+     .mic-button:hover { transform: translateY(-2px); }
+     .mic-button.recording {
+       animation: pulse 1.6s ease-in-out infinite;
+-      box-shadow: 0 24px 60px rgba(123, 51, 200, 0.4);
++      box-shadow: 0 24px 60px rgba(109, 47, 99, 0.4);
      }
-     .table-wrapper { width: 100%; overflow-x: auto; }
-     table { width: 100%; border-collapse: collapse; margin-top: 12px; min-width: 640px; }
-     th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
--    th { text-align: left; background: #f9fafb; }
--    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e5e7eb; font-size: 12px; }
-+    th { text-align: left; background: rgba(123, 51, 200, 0.08); color: var(--text); }
-+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(123, 51, 200, 0.12); font-size: 12px; color: #4a2c7b; }
-     .tag.positive { background: #d1fae5; color: #065f46; }
-     .tag.negative { background: #fee2e2; color: #991b1b; }
--    .tag.neutral { background: #e5e7eb; color: #374151; }
-+    .tag.neutral { background: rgba(123, 51, 200, 0.12); color: #4a2c7b; }
-     .table-note { margin-top: 8px; }
-     .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
--    button { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; background: #2563eb; color: #fff; }
--    button.secondary { background: #6b7280; }
-+    button { padding: 8px 12px; border: none; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: #fff; box-shadow: 0 12px 30px rgba(101, 42, 164, 0.25); transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease; }
-+    button.secondary { background: linear-gradient(135deg, #9a88c7, #7b33c8); box-shadow: 0 10px 26px rgba(122, 102, 176, 0.2); }
-+    button:hover { filter: brightness(1.03); transform: translateY(-1px); }
-+    button:active { transform: translateY(0); box-shadow: 0 10px 22px rgba(101, 42, 164, 0.25); }
++    .mic-button.recording svg { display: none; }
++    .mic-button.recording .mic-text { display: block; }
++    .sentiment-row { display: none; }
+     @keyframes pulse {
+       0% { transform: scale(1); }
+       50% { transform: scale(1.08); }
+       100% { transform: scale(1); }
+     }
  
-     @media (max-width: 720px) {
-       body { padding: 16px; }
-       h1 { font-size: 22px; }
-       .card { padding: 14px; }
-       .actions { flex-direction: column; align-items: stretch; }
-       button { width: 100%; text-align: center; }
-       .table-wrapper { margin: 0 -6px; padding: 0 6px; }
+     @media (max-width: 640px) {
+       body { padding: 16px; align-items: center; text-align: center; }
+       .container { margin-bottom: 24px; text-align: center; }
+       .card { padding: 16px; text-align: center; }
+       h1 { font-size: 22px; line-height: 1.2; }
+       h2 { font-size: 18px; }
+       p, label, .info-box, .status { text-align: center; }
+       .btn-row { flex-direction: column; align-items: stretch; justify-content: center; }
+       .btn-row { flex-direction: column; align-items: stretch; }
+       .btn { width: 100%; text-align: center; }
+       textarea, input[type="text"] { text-align: left; }
+       textarea { min-height: 120px; }
+       .mic-button { width: 120px; height: 120px; }
      }
    </style>
  </head>
  <body>
-   <h1>Отзывы — {{ company.name }}</h1>
-   <p class="muted">Собранные отзывы по компании. CSV можно скачать из основной панели.</p>
- 
-   <div class="card">
-     <div class="actions">
-       <span class="muted">Slug: {{ company.slug }}</span>
-       <button id="refreshBtn" class="secondary" type="button">Обновить</button>
-       <button id="backBtn" class="secondary" type="button">Назад</button>
+   <div class="container">
+     {% if company.logo_path %}
+       {% set logo_src = company.logo_path %}
+       {% if logo_src.startswith('/') %}
+         {% set logo_src = '/voice-feedback' ~ logo_src %}
+       {% endif %}
+       <img src="{{ logo_src }}" alt="Логотип" class="logo">
+     {% endif %}      
+     <h1>Отзыв для {{ company.name }}</h1>
+     <p>Запишите короткий отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
+     <div class="card step active" id="step1">
+       <h2>Шаг 1. Запишите голосовой отзыв</h2>
+       <div class="input-group">
+         <label for="userName">Ваше имя (или ник)</label>
+         <input type="text" id="userName" placeholder="Введите ваше имя">
+       </div>
+       <div class="mic-wrapper">
+         <button id="startBtn" class="mic-button" type="button" aria-label="Записать отзыв">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" />
+             <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+             <line x1="12" x2="12" y1="19" y2="22" />
+           </svg>
++          <span class="mic-text">стоп</span>
+         </button>
+       </div>
+       <div class="info-box">Запись делается через микрофон устройства. Не закрывайте вкладку, пока идёт запись.</div>
+       <p id="recordStatus" class="status"></p>
      </div>
-     <div id="reviewsContainer" class="muted" style="margin-top: 10px;">Загрузка...</div>
+ 
+     <div class="card step" id="step2">
+       <h2>Шаг 2. Проверка текста</h2>
+-      <p><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
++      <p class="sentiment-row"><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
+       <p><strong>Текст, который понял ИИ:</strong></p>
+-      <div class="info-box" id="aiText"></div>
++      <div class="info-box" id="aiText" style="font-size: 1.5rem;"></div>
+       <div class="btn-row">
+         <button id="editBtn" class="btn" type="button">Редактировать и отправить</button>
+         <button class="btn secondary" type="button" onclick="showStep(1)">Записать ещё раз</button>
+       </div>
+     </div>
+ 
+     <div class="card step" id="step3">
+       <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
+-      <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..."></textarea>
++      <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..." style="font-size: 1.5rem;"></textarea>
+       <div class="btn-row">
+         <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
+         <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
+       </div>
+       <p id="sendStatus" class="status"></p>
+     </div>
    </div>
  
    <script>
+     const BASE = '/voice-feedback';
+     const companySlug = "{{ company.slug }}";
+ 
+     let mediaRecorder;
+     let recorderMime;
+     let audioChunks = [];
+     let useFallback = false;
+     let fallbackContext = null;
+     let fallbackProcessor = null;
+     let fallbackSource = null;
+     let fallbackStream = null;
+     let fallbackBuffers = [];
+     let reviewId = null;
+     let normalizedText = "";
+ 
+     const step1 = document.getElementById("step1");
