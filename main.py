@@ -324,9 +324,26 @@ async def upload_audio(
 
     # --- 1. Сохраняем исходный файл как есть (webm/ogg) ---
     orig_ext = os.path.splitext(audio.filename or "")[1].lower()
-    if orig_ext not in [".ogg", ".oga", ".webm"]:
-        # по умолчанию считаем, что из браузера пришёл webm
-        orig_ext = ".webm"
+    if orig_ext not in [
+        ".ogg",
+        ".oga",
+        ".webm",
+        ".wav",
+        ".m4a",
+        ".mp4",
+        ".aac",
+    ]:
+        # пробуем определить по content-type
+        content_type = (audio.content_type or "").lower()
+        if "wav" in content_type:
+            orig_ext = ".wav"
+        elif "mp4" in content_type or "m4a" in content_type or "aac" in content_type:
+            orig_ext = ".m4a"
+        elif "ogg" in content_type or "opus" in content_type:
+            orig_ext = ".ogg"
+        else:
+            # по умолчанию считаем, что из браузера пришёл webm
+            orig_ext = ".webm"
 
     orig_filename = f"{company.id}_{safe_user}_{os.urandom(4).hex()}{orig_ext}"
     orig_path = static_dir / "audio" / orig_filename
@@ -362,6 +379,11 @@ async def upload_audio(
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=500,
+                detail="ffmpeg недоступен на сервере. Сообщите администратору.",
+            )            
         except subprocess.CalledProcessError:
             # если конвертация не удалась — логируем и кидаем 500
             raise HTTPException(
