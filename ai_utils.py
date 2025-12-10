@@ -2,6 +2,9 @@ import json
 import logging
 import os
 import re
+import subprocess
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Tuple
 
 import requests
@@ -65,11 +68,33 @@ def _auth_headers() -> dict:
     return {"Authorization": f"Api-Key {YANDEX_API_KEY}"}
 
 
-def transcribe_audio_with_speechkit(audio_path: str) -> str:
-    """
-    Отправляет аудиофайл в Yandex SpeechKit и возвращает распознанный текст.
-    Ожидается, что на вход подаётся OGG Opus (format=oggopus).
-    """
+def _get_audio_duration_seconds(audio_path: str) -> float:
+    """Возвращает длительность аудио через ffprobe (в секундах)."""
+
+    try:
+        result = subprocess.run(
+            [
+                "/usr/bin/ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                audio_path,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return float(result.stdout.strip())
+    except Exception as e:  # pragma: no cover - best-effort helper
+        logger.warning("Не удалось определить длительность аудио %s: %s", audio_path, e)
+        return 0.0
+
+
+def _transcribe_chunk(audio_path: str) -> str:
+    """Отправляет один аудиофайл в Yandex SpeechKit (синхронно)."""
 
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
@@ -116,6 +141,68 @@ def transcribe_audio_with_speechkit(audio_path: str) -> str:
     return (payload.get("result") or "").strip()
 
 
+def _transcribe_long_audio(audio_path: str, *, chunk_seconds: int = 15) -> str:
+    """
+    Делит длинное аудио на куски и последовательно отправляет в SpeechKit.
+    Используется простой ffmpeg-segmentation, порядок кусков сохраняется.
+    """
+
+    if chunk_seconds <= 0:
+        return _transcribe_chunk(audio_path)
+
+    with TemporaryDirectory() as tmpdir:
+        chunk_pattern = Path(tmpdir) / "chunk_%03d.ogg"
+        try:
+            subprocess.run(
+                [
+                    "/usr/bin/ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    audio_path,
+                    "-map",
+                    "0",
+                    "-f",
+                    "segment",
+                    "-segment_time",
+                    str(chunk_seconds),
+                    "-c",
+                    "copy",
+                    str(chunk_pattern),
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            raise RuntimeError("Ошибка разбиения длинного аудио на сегменты")
+
+        chunks = sorted(Path(tmpdir).glob("chunk_*.ogg"))
+        if not chunks:
+            raise RuntimeError("Не удалось создать аудиосегменты для распознавания")
+
+        texts: list[str] = []
+        for chunk_path in chunks:
+            chunk_text = _transcribe_chunk(str(chunk_path))
+            if chunk_text:
+                texts.append(chunk_text)
+
+    return " ".join(texts).strip()
+
+
+def transcribe_audio_with_speechkit(audio_path: str, *, chunk_seconds: int = 15) -> str:
+    """
+    Отправляет аудиофайл в Yandex SpeechKit и возвращает распознанный текст.
+    Если длительность превышает chunk_seconds — режем на части и собираем результат.
+    Ожидается OGG Opus (format=oggopus).
+    """
+
+    duration = _get_audio_duration_seconds(audio_path)
+    if duration and duration > chunk_seconds:
+        return _transcribe_long_audio(audio_path, chunk_seconds=chunk_seconds)
+
+    return _transcribe_chunk(audio_path)
+    
+    
 def _build_gpt_prompt(normalization_prompt: str) -> str:
     """
     Строим единый промпт: сначала правила рерайта, затем правила тональности,
