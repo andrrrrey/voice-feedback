@@ -3,7 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% set logo_src = None %}
+  {% if company.logo_path %}
+    {% set logo_src = company.logo_path %}
+    {% if logo_src.startswith('/') %}
+      {% set logo_src = '/voice-feedback' ~ logo_src %}
+    {% endif %}
+  {% endif %}  
+  
   <title>Оставить голосовой отзыв — {{ company.name }}</title>
+  <meta name="description" content="Оставьте голосовой отзыв для «{{ company.name }}».">
+  <meta property="og:title" content="Оставьте голосовой отзыв для «{{ company.name }}»">
+  <meta property="og:description" content="Оставьте голосовой отзыв для «{{ company.name }}».">
+  <meta property="og:url" content="{{ request.url }}">
+  {% if logo_src %}
+    <meta property="og:image" content="{{ logo_src }}">
+  {% endif %}  
   <style>
     :root {
       --bg-start: #dccada;
@@ -199,13 +214,9 @@
 </head>
 <body>
   <div class="container">
-    {% if company.logo_path %}
-      {% set logo_src = company.logo_path %}
-      {% if logo_src.startswith('/') %}
-        {% set logo_src = '/voice-feedback' ~ logo_src %}
-      {% endif %}
+    {% if logo_src %}
       <img src="{{ logo_src }}" alt="Логотип" class="logo">
-    {% endif %}      
+    {% endif %}
     <h1>Отзыв для {{ company.name }}</h1>
     <p>Запишите отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
     <div class="card step active" id="step1">
