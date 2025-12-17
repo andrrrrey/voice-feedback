@@ -157,6 +157,44 @@
       textarea { min-height: 120px; }
       .mic-button { width: 120px; height: 120px; }
     }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.35);
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal__content {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+      border: 2px solid var(--primary);
+    }
+
+    .modal__title {
+      margin: 0 0 10px;
+      font-size: 22px;
+      color: var(--text);
+    }
+
+    .modal__text {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.4;
+    }    
   </style>
 </head>
 <body>
@@ -213,6 +251,14 @@
     </div>
   </div>
 
+  <div class="modal" id="successModal" aria-hidden="true" role="dialog" aria-labelledby="successModalTitle">
+    <div class="modal__content">
+      <h3 class="modal__title" id="successModalTitle">Спасибо за ваш отзыв!</h3>
+      <p class="modal__text">Ваш отзыв успешно отправлен.</p>
+      <button type="button" class="btn" id="closeModalBtn">Закрыть</button>
+    </div>
+  </div>
+  
   <script>
     const BASE = '/voice-feedback';
     const companySlug = "{{ company.slug }}";
@@ -248,7 +294,21 @@
     const finalText = document.getElementById("finalText");
     const sendBtn = document.getElementById("sendBtn");
     const sendStatus = document.getElementById("sendStatus");
+    const successModal = document.getElementById("successModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
 
+    function showSuccessModal() {
+      successModal.classList.add("visible");
+      successModal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function hideSuccessModal() {
+      successModal.classList.remove("visible");
+      successModal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+    
     let isRecording = false;
 
     startBtn.onclick = async () => {
@@ -509,13 +569,26 @@
       });
 
       const data = await res.json();
-      if (data.status === "ok" && data.email_sent) {
-        sendStatus.textContent = "Спасибо! Ваш отзыв отправлен.";
+      if (data.status === "ok") {
+        sendStatus.textContent = data.email_sent
+          ? "Спасибо! Ваш отзыв отправлен."
+          : "Отзыв сохранён, но письмо не удалось отправить (ошибка email).";
+          
         sendBtn.disabled = true;
-      } else {
-        sendStatus.textContent = "Отзыв сохранён, но письмо не удалось отправить (ошибка email).";
+        showSuccessModal();
+        return;
       }
+
+      sendStatus.textContent = "Не удалось отправить отзыв. Попробуйте ещё раз позже.";      
     };
+    
+    successModal.addEventListener("click", (event) => {
+      if (event.target === successModal) {
+        hideSuccessModal();
+      }
+    });
+
+    closeModalBtn.addEventListener("click", hideSuccessModal);    
   </script>
 </body>
 </html>
