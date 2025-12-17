@@ -11,10 +11,10 @@
     {% endif %}
   {% endif %}  
   
-  <title>Оставить голосовой отзыв — {{ company.name }}</title>
-  <meta name="description" content="Оставьте голосовой отзыв для «{{ company.name }}».">
-  <meta property="og:title" content="Оставьте голосовой отзыв для «{{ company.name }}»">
-  <meta property="og:description" content="Оставьте голосовой отзыв для «{{ company.name }}».">
+  <title>{{ company.name }}</title>
+  <meta name="description" content="Оставьте голосовой отзыв">
+  <meta property="og:title" content="«{{ company.name }}»">
+  <meta property="og:description" content="Оставьте голосовой отзыв">
   <meta property="og:url" content="{{ request.url }}">
   {% if logo_src %}
     <meta property="og:image" content="{{ logo_src }}">
