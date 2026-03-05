@@ -17,6 +17,8 @@ class Company(Base):
     twogis_url = Column(String, nullable=True)       # ссылка на карточку в 2GIS
     ozon_url = Column(String, nullable=True)         # ссылка на карточку на Ozon
     wildberries_url = Column(String, nullable=True)  # ссылка на карточку на Wildberries
+    bitrix_webhook_url = Column(String, nullable=True)   # URL входящего webhook Bitrix24
+    bitrix_source_label = Column(String, nullable=True)  # метка источника лида, напр. VOICE_FEEDBACK_FORM
 
     reviews = relationship("Review", back_populates="company")
 

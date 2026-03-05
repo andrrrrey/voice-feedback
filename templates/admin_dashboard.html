@@ -433,6 +433,39 @@
         saveLinksBtn.onclick = () => saveCompanyLinks(c.id, linksBlock);
         actions.appendChild(linksBlock);
 
+        // Интеграция Bitrix24
+        const bitrixBlock = document.createElement('div');
+        bitrixBlock.style.cssText = 'margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; width:100%;';
+        bitrixBlock.innerHTML = `
+          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">
+            Интеграция Bitrix24
+          </div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">
+            После финализации отзыва в CRM будет создан новый лид.
+          </div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">
+            URL входящего webhook
+          </label>
+          <input type="url"
+            placeholder="https://yourcompany.bitrix24.ru/rest/1/xxxxxx/"
+            value="${c.bitrix_webhook_url || ''}"
+            data-bitrix-field="bitrix_webhook_url"
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">
+            Метка источника лида
+          </label>
+          <input type="text"
+            placeholder="VOICE_FEEDBACK_FORM"
+            value="${c.bitrix_source_label || ''}"
+            data-bitrix-field="bitrix_source_label"
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+          <button class="small secondary" type="button">Сохранить Bitrix24</button>
+          <span class="status" style="font-size:12px; margin-left:6px;"></span>
+        `;
+        const saveBitrixBtn = bitrixBlock.querySelector('button');
+        saveBitrixBtn.onclick = () => saveCompanyBitrix(c.id, bitrixBlock);
+        actions.appendChild(bitrixBlock);
+
         tdActions.appendChild(actions);
 
         tr.appendChild(tdActions);
@@ -602,6 +635,29 @@
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Ошибка сохранения ссылок');
+        statusEl.textContent = 'Сохранено';
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
+      } catch (e) {
+        statusEl.textContent = 'Ошибка сохранения';
+        console.error(e);
+      }
+    }
+
+    async function saveCompanyBitrix(companyId, container) {
+      const inputs = container.querySelectorAll('input[data-bitrix-field]');
+      const payload = {};
+      inputs.forEach(input => {
+        payload[input.dataset.bitrixField] = input.value.trim() || null;
+      });
+      const statusEl = container.querySelector('.status');
+      statusEl.textContent = 'Сохранение...';
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/bitrix`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Ошибка сохранения настроек Bitrix24');
         statusEl.textContent = 'Сохранено';
         setTimeout(() => { statusEl.textContent = ''; }, 2500);
       } catch (e) {
