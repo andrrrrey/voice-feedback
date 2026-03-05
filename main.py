@@ -15,7 +15,7 @@ import qrcode
 
 from database import Base, engine, SessionLocal
 from models import Company, Review
-from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, ReviewOut, ReviewFinalizeIn
+from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, ReviewOut, ReviewFinalizeIn
 from email_utils import send_review_email
 from ai_utils import (
     NORMALIZATION_PROMPT,
@@ -26,12 +26,21 @@ from ai_utils import (
 # Инициализация БД
 Base.metadata.create_all(bind=engine)
 
-# Мягкая миграция: добавляем колонку prompt в таблицу companies, если её нет
+# Мягкая миграция: добавляем новые колонки в таблицу companies, если их нет
 with engine.connect() as conn:
     inspector = inspect(conn)
     columns = [col["name"] for col in inspector.get_columns("companies")]
     if "prompt" not in columns:
         conn.execute(text("ALTER TABLE companies ADD COLUMN prompt TEXT"))
+    if "yandex_url" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN yandex_url VARCHAR"))
+    if "twogis_url" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN twogis_url VARCHAR"))
+    if "ozon_url" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN ozon_url VARCHAR"))
+    if "wildberries_url" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN wildberries_url VARCHAR"))
+    conn.commit()
 
 app = FastAPI(title="Voice Feedback Service")
 
@@ -187,6 +196,25 @@ def update_company_prompt(
         raise HTTPException(status_code=404, detail="Company not found")
 
     company.prompt = data.prompt.strip()
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+@app.patch("/api/admin/companies/{company_id}/links", response_model=CompanyOut)
+def update_company_links(
+    company_id: int,
+    data: CompanyLinksUpdate,
+    db: Session = Depends(get_db),
+):
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company.yandex_url = data.yandex_url or None
+    company.twogis_url = data.twogis_url or None
+    company.ozon_url = data.ozon_url or None
+    company.wildberries_url = data.wildberries_url or None
     db.commit()
     db.refresh(company)
     return company

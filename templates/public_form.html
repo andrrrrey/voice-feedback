@@ -152,6 +152,46 @@
     .mic-button.recording svg { display: none; }
     .mic-button.recording .mic-text { display: block; }
     .sentiment-row { display: none; }
+    .platforms-block {
+      margin-top: 16px;
+      border-top: 2px solid rgba(125, 59, 115, 0.15);
+      padding-top: 14px;
+    }
+    .platforms-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin: 0 0 10px;
+      color: var(--text);
+    }
+    .platforms-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .platform-btn {
+      display: inline-block;
+      padding: 9px 18px;
+      border-radius: 12px;
+      border: 2px solid var(--primary);
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      box-shadow: 0 8px 20px rgba(109, 47, 99, 0.2);
+    }
+    .platform-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(109, 47, 99, 0.3); }
+    .platforms-status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+    @media (max-width: 640px) {
+      .platforms-list { justify-content: center; }
+    }
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.08); }
@@ -259,6 +299,28 @@
         <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
       </div>
       <p id="sendStatus" class="status"></p>
+
+      {%- set has_platforms = company.yandex_url or company.twogis_url or company.ozon_url or company.wildberries_url -%}
+      {% if has_platforms %}
+      <div class="platforms-block" id="platformsBlock">
+        <p class="platforms-title">Отправьте отзыв на площадки</p>
+        <div class="platforms-list" id="platformsList">
+          {% if company.yandex_url %}
+          <a class="platform-btn" data-url="{{ company.yandex_url }}" href="{{ company.yandex_url }}" target="_blank" rel="noopener noreferrer">Яндекс</a>
+          {% endif %}
+          {% if company.twogis_url %}
+          <a class="platform-btn" data-url="{{ company.twogis_url }}" href="{{ company.twogis_url }}" target="_blank" rel="noopener noreferrer">2GIS</a>
+          {% endif %}
+          {% if company.ozon_url %}
+          <a class="platform-btn" data-url="{{ company.ozon_url }}" href="{{ company.ozon_url }}" target="_blank" rel="noopener noreferrer">Ozon</a>
+          {% endif %}
+          {% if company.wildberries_url %}
+          <a class="platform-btn" data-url="{{ company.wildberries_url }}" href="{{ company.wildberries_url }}" target="_blank" rel="noopener noreferrer">Wildberries</a>
+          {% endif %}
+        </div>
+        <p class="platforms-status" id="platformsStatus"></p>
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -565,6 +627,24 @@
       finalText.value = normalizedText;
       showStep(3);
     };
+
+    // Обработка кликов по кнопкам площадок
+    document.querySelectorAll('.platform-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        const url = btn.dataset.url;
+        const statusEl = document.getElementById('platformsStatus');
+        if (!statusEl) return;
+        statusEl.textContent = '';
+        try {
+          await navigator.clipboard.writeText(finalText.value);
+          statusEl.textContent = 'Текст отзыва скопирован. Откроем площадку в новой вкладке.';
+        } catch (_) {
+          statusEl.textContent = 'Не удалось скопировать автоматически. Скопируйте текст вручную.';
+        }
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+    });
 
     sendBtn.onclick = async () => {
       sendStatus.textContent = "Отправка...";

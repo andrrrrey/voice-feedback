@@ -15,6 +15,10 @@ class CompanyOut(BaseModel):
     logo_path: Optional[str]
     qr_path: Optional[str]
     prompt: Optional[str]
+    yandex_url: Optional[str]
+    twogis_url: Optional[str]
+    ozon_url: Optional[str]
+    wildberries_url: Optional[str]
 
     class Config:
         orm_mode = True
@@ -39,3 +43,10 @@ class ReviewFinalizeIn(BaseModel):
 
 class CompanyPromptUpdate(BaseModel):
     prompt: str
+
+
+class CompanyLinksUpdate(BaseModel):
+    yandex_url: Optional[str] = None
+    twogis_url: Optional[str] = None
+    ozon_url: Optional[str] = None
+    wildberries_url: Optional[str] = None
