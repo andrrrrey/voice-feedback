@@ -76,7 +76,7 @@ def send_max_message(chat_id: str, text: str) -> bool:
     Отправляет текстовое сообщение пользователю через бот Max.
 
     Параметры:
-        chat_id — идентификатор чата/пользователя в Max (секретный ключ).
+        chat_id — идентификатор пользователя в Max (секретный ключ, числовой).
         text    — текст сообщения.
 
     Возвращает True при успехе, False при ошибке или если токен не задан.
@@ -84,13 +84,21 @@ def send_max_message(chat_id: str, text: str) -> bool:
     if not MAX_BOT_TOKEN or not chat_id:
         return False
 
+    # Max Bot API (TamTam-совместимый): user_id — целое число
+    try:
+        user_id = int(chat_id)
+    except ValueError:
+        logger.error("Max: chat_id '%s' не является числом", chat_id)
+        return False
+
     payload = {
-        "recipient": {"chat_id": chat_id},
-        "body": {"type": "Text", "text": text},
+        "recipient": {"user_id": user_id},
+        "type": "text",
+        "text": text,
     }
     result = _api_post("messages", payload)
     if result is not None:
-        logger.info("Max: сообщение отправлено в chat_id=%s", chat_id)
+        logger.info("Max: сообщение отправлено user_id=%s", user_id)
         return True
     return False
 
