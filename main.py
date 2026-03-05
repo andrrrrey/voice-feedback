@@ -15,8 +15,9 @@ import qrcode
 
 from database import Base, engine, SessionLocal
 from models import Company, Review
-from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, ReviewOut, ReviewFinalizeIn
+from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, CompanyBitrixUpdate, ReviewOut, ReviewFinalizeIn
 from email_utils import send_review_email
+from bitrix_utils import create_bitrix_lead
 from ai_utils import (
     NORMALIZATION_PROMPT,
     normalize_and_analyze_with_yandex_gpt,
@@ -40,6 +41,10 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE companies ADD COLUMN ozon_url VARCHAR"))
     if "wildberries_url" not in columns:
         conn.execute(text("ALTER TABLE companies ADD COLUMN wildberries_url VARCHAR"))
+    if "bitrix_webhook_url" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN bitrix_webhook_url VARCHAR"))
+    if "bitrix_source_label" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN bitrix_source_label VARCHAR"))
     conn.commit()
 
 app = FastAPI(title="Voice Feedback Service")
@@ -216,6 +221,23 @@ def update_company_links(
     company.twogis_url = data.twogis_url or None
     company.ozon_url = data.ozon_url or None
     company.wildberries_url = data.wildberries_url or None
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+@app.patch("/api/admin/companies/{company_id}/bitrix", response_model=CompanyOut)
+def update_company_bitrix(
+    company_id: int,
+    data: CompanyBitrixUpdate,
+    db: Session = Depends(get_db),
+):
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company.bitrix_webhook_url = (data.bitrix_webhook_url or "").strip() or None
+    company.bitrix_source_label = (data.bitrix_source_label or "").strip() or None
     db.commit()
     db.refresh(company)
     return company
@@ -483,4 +505,15 @@ def finalize_review(
         db.commit()
         db.refresh(review)
 
-    return {"status": "ok", "email_sent": email_ok}
+    bitrix_ok = False
+    if company.bitrix_webhook_url:
+        bitrix_ok = create_bitrix_lead(
+            webhook_url=company.bitrix_webhook_url,
+            source_label=company.bitrix_source_label or "VOICE_FEEDBACK_FORM",
+            user_name=review.user_name,
+            review_text=review.normalized_text or "",
+            sentiment=review.sentiment,
+            company_name=company.name,
+        )
+
+    return {"status": "ok", "email_sent": email_ok, "bitrix_lead_created": bitrix_ok}

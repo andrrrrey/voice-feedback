@@ -19,6 +19,8 @@ class CompanyOut(BaseModel):
     twogis_url: Optional[str]
     ozon_url: Optional[str]
     wildberries_url: Optional[str]
+    bitrix_webhook_url: Optional[str]
+    bitrix_source_label: Optional[str]
 
     class Config:
         orm_mode = True
@@ -50,3 +52,8 @@ class CompanyLinksUpdate(BaseModel):
     twogis_url: Optional[str] = None
     ozon_url: Optional[str] = None
     wildberries_url: Optional[str] = None
+
+
+class CompanyBitrixUpdate(BaseModel):
+    bitrix_webhook_url: Optional[str] = None
+    bitrix_source_label: Optional[str] = None
