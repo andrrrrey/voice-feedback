@@ -416,6 +416,23 @@
         actions.appendChild(csvBtn);
         actions.appendChild(reviewsBtn);
         actions.appendChild(deleteBtn);
+
+        // Ссылки на площадки отзывов
+        const linksBlock = document.createElement('div');
+        linksBlock.style.cssText = 'margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; width:100%;';
+        linksBlock.innerHTML = `
+          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">Ссылки на площадки отзывов</div>
+          <input type="url" placeholder="Яндекс" value="${c.yandex_url || ''}" data-field="yandex_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
+          <input type="url" placeholder="2GIS" value="${c.twogis_url || ''}" data-field="twogis_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
+          <input type="url" placeholder="Ozon" value="${c.ozon_url || ''}" data-field="ozon_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
+          <input type="url" placeholder="Wildberries" value="${c.wildberries_url || ''}" data-field="wildberries_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+          <button class="small secondary" type="button">Сохранить ссылки</button>
+          <span class="status" style="font-size:12px; margin-left:6px;"></span>
+        `;
+        const saveLinksBtn = linksBlock.querySelector('button');
+        saveLinksBtn.onclick = () => saveCompanyLinks(c.id, linksBlock);
+        actions.appendChild(linksBlock);
+
         tdActions.appendChild(actions);
 
         tr.appendChild(tdActions);
@@ -569,6 +586,29 @@
         savePromptBtn.disabled = false;
       }
     };
+
+    async function saveCompanyLinks(companyId, container) {
+      const inputs = container.querySelectorAll('input[data-field]');
+      const payload = {};
+      inputs.forEach(input => {
+        payload[input.dataset.field] = input.value.trim() || null;
+      });
+      const statusEl = container.querySelector('.status');
+      statusEl.textContent = 'Сохранение...';
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/links`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Ошибка сохранения ссылок');
+        statusEl.textContent = 'Сохранено';
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
+      } catch (e) {
+        statusEl.textContent = 'Ошибка сохранения';
+        console.error(e);
+      }
+    }
 
     // начальная загрузка
     loadCompanies();

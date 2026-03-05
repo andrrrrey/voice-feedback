@@ -13,6 +13,10 @@ class Company(Base):
     logo_path = Column(String, nullable=True)
     qr_path = Column(String, nullable=True)
     prompt = Column(Text, nullable=True)             # кастомный промпт для нейросети
+    yandex_url = Column(String, nullable=True)       # ссылка на карточку на Яндексе
+    twogis_url = Column(String, nullable=True)       # ссылка на карточку в 2GIS
+    ozon_url = Column(String, nullable=True)         # ссылка на карточку на Ozon
+    wildberries_url = Column(String, nullable=True)  # ссылка на карточку на Wildberries
 
     reviews = relationship("Review", back_populates="company")
 
