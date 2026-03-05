@@ -53,6 +53,7 @@ static_dir.mkdir(exist_ok=True)
 (static_dir / "logos").mkdir(exist_ok=True)
 (static_dir / "qr").mkdir(exist_ok=True)
 (static_dir / "audio").mkdir(exist_ok=True)
+(static_dir / "platforms").mkdir(exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(templates_dir))
