@@ -52,12 +52,14 @@ def _api_get(method: str, params: dict | None = None) -> dict | None:
         return None
 
 
-def _api_post(method: str, payload: dict) -> dict | None:
+def _api_post(method: str, payload: dict, extra_params: dict | None = None) -> dict | None:
     """POST-запрос к Bot API Max."""
     if not MAX_BOT_TOKEN:
         return None
     url = f"{MAX_BOT_API_URL}/{method}"
     params = {"access_token": MAX_BOT_TOKEN}
+    if extra_params:
+        params.update(extra_params)
     try:
         r = requests.post(url, params=params, json=payload, timeout=10)
         r.raise_for_status()
@@ -84,19 +86,16 @@ def send_max_message(chat_id: str, text: str) -> bool:
     if not MAX_BOT_TOKEN or not chat_id:
         return False
 
-    # Max Bot API (TamTam-совместимый): user_id — целое число
+    # Max Bot API (TamTam-совместимый): user_id передаётся в query string,
+    # тело запроса содержит только текст сообщения.
     try:
         user_id = int(chat_id)
     except ValueError:
         logger.error("Max: chat_id '%s' не является числом", chat_id)
         return False
 
-    payload = {
-        "recipient": {"user_id": user_id},
-        "type": "text",
-        "text": text,
-    }
-    result = _api_post("messages", payload)
+    payload = {"text": text}
+    result = _api_post("messages", payload, extra_params={"user_id": user_id})
     if result is not None:
         logger.info("Max: сообщение отправлено user_id=%s", user_id)
         return True
