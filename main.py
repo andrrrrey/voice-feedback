@@ -15,9 +15,10 @@ import qrcode
 
 from database import Base, engine, SessionLocal
 from models import Company, Review
-from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, CompanyBitrixUpdate, ReviewOut, ReviewFinalizeIn
+from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, CompanyBitrixUpdate, CompanyMaxUpdate, ReviewOut, ReviewFinalizeIn
 from email_utils import send_review_email
 from bitrix_utils import create_bitrix_lead
+from max_utils import send_review_via_max, start_polling as start_max_polling
 from ai_utils import (
     NORMALIZATION_PROMPT,
     normalize_and_analyze_with_yandex_gpt,
@@ -45,9 +46,16 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE companies ADD COLUMN bitrix_webhook_url VARCHAR"))
     if "bitrix_source_label" not in columns:
         conn.execute(text("ALTER TABLE companies ADD COLUMN bitrix_source_label VARCHAR"))
+    if "max_chat_id" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN max_chat_id VARCHAR"))
     conn.commit()
 
 app = FastAPI(title="Voice Feedback Service")
+
+
+@app.on_event("startup")
+async def on_startup():
+    start_max_polling()
 
 # Статика и шаблоны
 BASE_DIR = Path(__file__).resolve().parent
@@ -238,6 +246,22 @@ def update_company_bitrix(
 
     company.bitrix_webhook_url = (data.bitrix_webhook_url or "").strip() or None
     company.bitrix_source_label = (data.bitrix_source_label or "").strip() or None
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+@app.patch("/api/admin/companies/{company_id}/max", response_model=CompanyOut)
+def update_company_max(
+    company_id: int,
+    data: CompanyMaxUpdate,
+    db: Session = Depends(get_db),
+):
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company.max_chat_id = (data.max_chat_id or "").strip() or None
     db.commit()
     db.refresh(company)
     return company
@@ -516,4 +540,14 @@ def finalize_review(
             company_name=company.name,
         )
 
-    return {"status": "ok", "email_sent": email_ok, "bitrix_lead_created": bitrix_ok}
+    max_ok = False
+    if company.max_chat_id:
+        max_ok = send_review_via_max(
+            chat_id=company.max_chat_id,
+            user_name=review.user_name,
+            review_text=review.normalized_text or "",
+            sentiment=review.sentiment,
+            company_name=company.name,
+        )
+
+    return {"status": "ok", "email_sent": email_ok, "bitrix_lead_created": bitrix_ok, "max_sent": max_ok}

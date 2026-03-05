@@ -19,6 +19,7 @@ class Company(Base):
     wildberries_url = Column(String, nullable=True)  # ссылка на карточку на Wildberries
     bitrix_webhook_url = Column(String, nullable=True)   # URL входящего webhook Bitrix24
     bitrix_source_label = Column(String, nullable=True)  # метка источника лида, напр. VOICE_FEEDBACK_FORM
+    max_chat_id = Column(String, nullable=True)          # chat_id в мессенджере Max (секретный ключ)
 
     reviews = relationship("Review", back_populates="company")
 

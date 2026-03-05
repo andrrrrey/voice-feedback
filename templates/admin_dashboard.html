@@ -466,6 +466,32 @@
         saveBitrixBtn.onclick = () => saveCompanyBitrix(c.id, bitrixBlock);
         actions.appendChild(bitrixBlock);
 
+        // Интеграция мессенджера Max
+        const maxBlock = document.createElement('div');
+        maxBlock.style.cssText = 'margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; width:100%;';
+        maxBlock.innerHTML = `
+          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">
+            Мессенджер Max
+          </div>
+          <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">
+            Запустите бота <b>@VoiceFeedbackBot</b> в Max — он пришлёт ваш секретный ключ.
+            Вставьте его сюда, и отзывы будут приходить вам в мессенджер.
+          </div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">
+            Секретный ключ (chat_id)
+          </label>
+          <input type="text"
+            placeholder="Например: 123456789"
+            value="${c.max_chat_id || ''}"
+            data-max-field="max_chat_id"
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+          <button class="small secondary" type="button">Сохранить Max</button>
+          <span class="status" style="font-size:12px; margin-left:6px;"></span>
+        `;
+        const saveMaxBtn = maxBlock.querySelector('button');
+        saveMaxBtn.onclick = () => saveCompanyMax(c.id, maxBlock);
+        actions.appendChild(maxBlock);
+
         tdActions.appendChild(actions);
 
         tr.appendChild(tdActions);
@@ -658,6 +684,26 @@
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Ошибка сохранения настроек Bitrix24');
+        statusEl.textContent = 'Сохранено';
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
+      } catch (e) {
+        statusEl.textContent = 'Ошибка сохранения';
+        console.error(e);
+      }
+    }
+
+    async function saveCompanyMax(companyId, container) {
+      const input = container.querySelector('input[data-max-field]');
+      const payload = { max_chat_id: input.value.trim() || null };
+      const statusEl = container.querySelector('.status');
+      statusEl.textContent = 'Сохранение...';
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/max`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error('Ошибка сохранения настроек Max');
         statusEl.textContent = 'Сохранено';
         setTimeout(() => { statusEl.textContent = ''; }, 2500);
       } catch (e) {
