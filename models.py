@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -20,6 +20,7 @@ class Company(Base):
     bitrix_webhook_url = Column(String, nullable=True)   # URL входящего webhook Bitrix24
     bitrix_source_label = Column(String, nullable=True)  # метка источника лида, напр. VOICE_FEEDBACK_FORM
     max_chat_id = Column(String, nullable=True)          # chat_id в мессенджере Max (секретный ключ)
+    disable_email = Column(Boolean, default=False, nullable=False)  # не отправлять отзывы на email
 
     reviews = relationship("Review", back_populates="company")
 

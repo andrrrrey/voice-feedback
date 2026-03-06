@@ -381,6 +381,21 @@
         const actions = document.createElement('div');
         actions.className = 'row-actions';
 
+        // Настройки email
+        const emailSettingsBlock = document.createElement('div');
+        emailSettingsBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e5e7eb;';
+        const emailCheckboxId = `disable-email-${c.id}`;
+        emailSettingsBlock.innerHTML = `
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+            <input type="checkbox" id="${emailCheckboxId}" ${c.disable_email ? 'checked' : ''}>
+            Не отправлять отзывы на email
+          </label>
+          <span class="status" id="email-settings-status-${c.id}" style="font-size:12px; margin-top:4px; display:block;"></span>
+        `;
+        const emailCheckbox = emailSettingsBlock.querySelector(`#${emailCheckboxId}`);
+        emailCheckbox.onchange = () => saveEmailSettings(c.id, emailCheckbox.checked, emailSettingsBlock);
+        actions.appendChild(emailSettingsBlock);
+
         // Загрузка логотипа
         const logoInputId = `logo-input-${c.id}`;
         const logoBlock = document.createElement('div');
@@ -704,6 +719,24 @@
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Ошибка сохранения настроек Max');
+        statusEl.textContent = 'Сохранено';
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
+      } catch (e) {
+        statusEl.textContent = 'Ошибка сохранения';
+        console.error(e);
+      }
+    }
+
+    async function saveEmailSettings(companyId, disableEmail, container) {
+      const statusEl = container.querySelector('.status');
+      statusEl.textContent = 'Сохранение...';
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/email-settings`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ disable_email: disableEmail }),
+        });
+        if (!res.ok) throw new Error('Ошибка сохранения настроек email');
         statusEl.textContent = 'Сохранено';
         setTimeout(() => { statusEl.textContent = ''; }, 2500);
       } catch (e) {

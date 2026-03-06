@@ -170,10 +170,7 @@ def _process_updates(updates: list) -> None:
         reply = (
             "Привет!\n\n"
             "Ваш секретный ключ для привязки к компании в системе Voice Feedback:\n\n"
-            f"{chat_id}\n\n"
-            "Скопируйте этот ключ и вставьте его в поле «Ключ Max» "
-            "в настройках нужной компании в админ-панели. "
-            "После этого новые отзывы будут приходить вам в этот чат."
+            f"{chat_id}"
         )
         send_max_message(chat_id, reply)
         logger.info(

@@ -15,7 +15,7 @@ import qrcode
 
 from database import Base, engine, SessionLocal
 from models import Company, Review
-from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, CompanyBitrixUpdate, CompanyMaxUpdate, ReviewOut, ReviewFinalizeIn
+from schemas import CompanyCreate, CompanyOut, CompanyPromptUpdate, CompanyLinksUpdate, CompanyBitrixUpdate, CompanyMaxUpdate, CompanyEmailSettingsUpdate, ReviewOut, ReviewFinalizeIn
 from email_utils import send_review_email
 from bitrix_utils import create_bitrix_lead
 from max_utils import send_review_via_max, start_polling as start_max_polling
@@ -262,6 +262,22 @@ def update_company_max(
         raise HTTPException(status_code=404, detail="Company not found")
 
     company.max_chat_id = (data.max_chat_id or "").strip() or None
+    db.commit()
+    db.refresh(company)
+    return company
+
+
+@app.patch("/api/admin/companies/{company_id}/email-settings", response_model=CompanyOut)
+def update_company_email_settings(
+    company_id: int,
+    data: CompanyEmailSettingsUpdate,
+    db: Session = Depends(get_db),
+):
+    company = db.query(Company).get(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company.disable_email = data.disable_email
     db.commit()
     db.refresh(company)
     return company
@@ -516,15 +532,17 @@ def finalize_review(
     db.commit()
     db.refresh(review)
 
-    email_ok = send_review_email(
-        to_email=company.email,
-        company_name=company.name,
-        user_name=review.user_name,
-        text=review.normalized_text,
-        sentiment=review.sentiment or "neutral",
-    )
+    email_ok = False
+    if not company.disable_email:
+        email_ok = send_review_email(
+            to_email=company.email,
+            company_name=company.name,
+            user_name=review.user_name,
+            text=review.normalized_text,
+            sentiment=review.sentiment or "neutral",
+        )
 
-    if email_ok:
+    if email_ok or company.disable_email:
         review.status = "sent"
         db.commit()
         db.refresh(review)
