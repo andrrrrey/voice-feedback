@@ -22,6 +22,7 @@ class CompanyOut(BaseModel):
     bitrix_webhook_url: Optional[str]
     bitrix_source_label: Optional[str]
     max_chat_id: Optional[str]
+    disable_email: bool = False
 
     class Config:
         orm_mode = True
@@ -62,3 +63,7 @@ class CompanyBitrixUpdate(BaseModel):
 
 class CompanyMaxUpdate(BaseModel):
     max_chat_id: Optional[str] = None
+
+
+class CompanyEmailSettingsUpdate(BaseModel):
+    disable_email: bool = False

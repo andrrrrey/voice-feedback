@@ -304,7 +304,7 @@
     </div>
 
     <div class="card step" id="step3">
-      <h2>Шаг 3. Отредактируйте текст и отправьте</h2>
+      <h2>Шаг 2. Отредактируйте текст и отправьте</h2>
       <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..." style="font-size: 1.5rem;"></textarea>
       <div class="btn-row">
         <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
@@ -532,8 +532,9 @@
         aiText.textContent = data.normalized_text;
         sentimentSpan.textContent = data.sentiment;
 
+        finalText.value = normalizedText;
         recordStatus.textContent = "";
-        showStep(2);
+        showStep(3);
       } catch (error) {
         console.error(error);
         recordStatus.textContent = `Сбой сети при отправке аудио: ${error?.message || error}`;
