@@ -67,3 +67,9 @@ class CompanyMaxUpdate(BaseModel):
 
 class CompanyEmailSettingsUpdate(BaseModel):
     disable_email: bool = False
+
+
+class CompanyInfoUpdate(BaseModel):
+    name: str
+    slug: str
+    email: EmailStr
