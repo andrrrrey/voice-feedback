@@ -307,7 +307,9 @@
       <h2>Шаг 2. Отредактируйте текст и отправьте</h2>
       <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..." style="font-size: 1.5rem;"></textarea>
       <div class="btn-row">
+        {% if not company.disable_email %}
         <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
+        {% endif %}
         <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
       </div>
       <p id="sendStatus" class="status"></p>
@@ -667,7 +669,7 @@
       });
     });
 
-    sendBtn.onclick = async () => {
+    if (sendBtn) sendBtn.onclick = async () => {
       sendStatus.textContent = "Отправка...";
       const body = {
         text: finalText.value,
@@ -685,13 +687,13 @@
         sendStatus.textContent = data.email_sent
           ? "Спасибо! Ваш отзыв отправлен."
           : "Отзыв сохранён, но письмо не удалось отправить (ошибка email).";
-          
-        sendBtn.disabled = true;
+
+        if (sendBtn) sendBtn.disabled = true;
         showSuccessModal();
         return;
       }
 
-      sendStatus.textContent = "Не удалось отправить отзыв. Попробуйте ещё раз позже.";      
+      sendStatus.textContent = "Не удалось отправить отзыв. Попробуйте ещё раз позже.";
     };
     
     successModal.addEventListener("click", (event) => {
