@@ -48,6 +48,8 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE companies ADD COLUMN bitrix_source_label VARCHAR"))
     if "max_chat_id" not in columns:
         conn.execute(text("ALTER TABLE companies ADD COLUMN max_chat_id VARCHAR"))
+    if "disable_email" not in columns:
+        conn.execute(text("ALTER TABLE companies ADD COLUMN disable_email BOOLEAN NOT NULL DEFAULT 0"))
     conn.commit()
 
 app = FastAPI(title="Voice Feedback Service")
