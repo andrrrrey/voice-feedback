@@ -381,6 +381,27 @@
         const actions = document.createElement('div');
         actions.className = 'row-actions';
 
+        // Редактирование основных данных компании
+        const editInfoBlock = document.createElement('div');
+        editInfoBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e5e7eb; width:100%;';
+        editInfoBlock.innerHTML = `
+          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">Основные данные</div>
+          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">Название</label>
+          <input type="text" data-info-field="name" value="${c.name.replace(/"/g, '&quot;')}"
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
+          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">Slug</label>
+          <input type="text" data-info-field="slug" value="${c.slug}"
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
+          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">Email</label>
+          <input type="email" data-info-field="email" value="${c.email}"
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+          <button class="small secondary" type="button">Сохранить</button>
+          <span class="status" style="font-size:12px; margin-left:6px;"></span>
+        `;
+        const saveInfoBtn = editInfoBlock.querySelector('button');
+        saveInfoBtn.onclick = () => saveCompanyInfo(c.id, editInfoBlock);
+        actions.appendChild(editInfoBlock);
+
         // Настройки email
         const emailSettingsBlock = document.createElement('div');
         emailSettingsBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e5e7eb;';
@@ -739,6 +760,34 @@
         if (!res.ok) throw new Error('Ошибка сохранения настроек email');
         statusEl.textContent = 'Сохранено';
         setTimeout(() => { statusEl.textContent = ''; }, 2500);
+      } catch (e) {
+        statusEl.textContent = 'Ошибка сохранения';
+        console.error(e);
+      }
+    }
+
+    async function saveCompanyInfo(companyId, container) {
+      const inputs = container.querySelectorAll('input[data-info-field]');
+      const payload = {};
+      inputs.forEach(input => {
+        payload[input.dataset.infoField] = input.value.trim();
+      });
+      const statusEl = container.querySelector('.status');
+      statusEl.textContent = 'Сохранение...';
+      try {
+        const res = await fetch(`${BASE}/api/admin/companies/${companyId}/info`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          statusEl.textContent = data.detail || 'Ошибка сохранения';
+          return;
+        }
+        statusEl.textContent = 'Сохранено';
+        setTimeout(() => { statusEl.textContent = ''; }, 2500);
+        await loadCompanies();
       } catch (e) {
         statusEl.textContent = 'Ошибка сохранения';
         console.error(e);
