@@ -81,13 +81,17 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      margin-bottom: 6px;
     }
     .logo {
       width: 80px;
       height: 80px;
       object-fit: contain;
       flex-shrink: 0;
+    }
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .header-label {
       font-family: 'Garet', 'Montserrat', sans-serif;
@@ -103,7 +107,6 @@
       text-transform: uppercase;
       line-height: 1.25;
       margin: 0;
-      text-align: center;
     }
 
     /* ── Steps ── */
@@ -168,11 +171,12 @@
       width: 110px;
       height: auto;
       flex-shrink: 0;
+      transform: translateY(50px);
     }
 
     .mic-button {
-      width: 190px;
-      height: 190px;
+      width: 290px;
+      height: 290px;
       border-radius: 50%;
       border: none;
       background: none;
@@ -185,8 +189,8 @@
       transition: transform 0.2s;
     }
     .mic-button img {
-      width: 190px;
-      height: 190px;
+      width: 290px;
+      height: 290px;
       object-fit: contain;
       pointer-events: none;
     }
@@ -352,7 +356,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: var(--white);
+      background: #efefef;
       border-top: 1px solid #ddd;
       padding: 12px 16px;
       font-size: 14px;
@@ -361,16 +365,14 @@
       z-index: 10;
     }
 
-    /* ── Semicircle decoration ── */
+    /* ── Semicircle image ── */
     .deco-semicircle {
       position: fixed;
-      bottom: -110px;
-      right: -110px;
-      width: 260px;
-      height: 260px;
-      border-radius: 50%;
-      background: var(--light-blue);
-      z-index: 1;
+      bottom: 44px;
+      right: 0;
+      width: 180px;
+      height: auto;
+      z-index: 0;
       pointer-events: none;
     }
 
@@ -409,8 +411,8 @@
     @media (max-width: 400px) {
       .company-name { font-size: 19px; }
       .mic-heading  { font-size: 26px; }
-      .mic-button, .mic-button img { width: 150px; height: 150px; }
-      .arrow-img    { width: 80px; }
+      .mic-button, .mic-button img { width: 220px; height: 220px; }
+      .arrow-img    { width: 80px; transform: translateY(36px); }
       .header-label { font-size: 15px; }
     }
   </style>
@@ -424,9 +426,11 @@
         {% if logo_src %}
           <img src="{{ logo_src }}" alt="Логотип" class="logo">
         {% endif %}
-        <div class="header-label">Отзыв для</div>
+        <div class="header-right">
+          <div class="header-label">Отзыв для</div>
+          <div class="company-name">«{{ company.name }}»</div>
+        </div>
       </div>
-      <div class="company-name">«{{ company.name }}»</div>
     </div>
 
     <!-- ── Step 1: Record ── -->
@@ -518,8 +522,8 @@
 
   </div>
 
-  <!-- Semicircle decoration bottom-right -->
-  <div class="deco-semicircle"></div>
+  <!-- Semicircle decoration bottom-right (replace with your image) -->
+  <img src="/voice-feedback/static/images/semicircle.png" alt="" class="deco-semicircle" onerror="this.style.display='none'">
 
   <div class="footer">Сделано сервисом - НейроОтзыв</div>
 
