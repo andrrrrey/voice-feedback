@@ -270,56 +270,34 @@
     .platforms-label strong { font-weight: 700; }
 
     .platforms-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: flex-start;
-      padding-left: 4px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
     }
 
     .platform-item {
       display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .platform-checkbox {
-      width: 22px;
-      height: 22px;
-      border: 2px solid var(--primary);
-      border-radius: 4px;
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      background: var(--white);
-      flex-shrink: 0;
-      position: relative;
-      transition: background 0.15s;
-    }
-    .platform-checkbox:checked {
-      background: var(--primary);
-    }
-    .platform-checkbox:checked::after {
-      content: '';
-      position: absolute;
-      top: 2px; left: 5px;
-      width: 8px; height: 12px;
-      border: 2px solid #fff;
-      border-top: none;
-      border-left: none;
-      transform: rotate(45deg);
+      justify-content: center;
     }
 
     .platform-btn {
-      display: inline-block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       text-decoration: none;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
     }
+    .platform-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(157,166,220,0.35); }
     .platform-btn img {
-      height: 58px;
-      width: auto;
+      width: 100%;
+      height: auto;
       display: block;
-      border-radius: 8px;
+      object-fit: contain;
     }
 
     .platforms-note {
@@ -476,7 +454,6 @@
         <div class="platforms-list" id="platformsList">
           {% if company.twogis_url %}
           <div class="platform-item">
-            <input type="checkbox" class="platform-checkbox" id="cb_twogis">
             <a class="platform-btn" data-url="{{ company.twogis_url }}" href="{{ company.twogis_url }}" target="_blank" rel="noopener noreferrer" title="2GIS">
               <img src="/voice-feedback/static/platforms/2gis.png" alt="2GIS">
             </a>
@@ -484,7 +461,6 @@
           {% endif %}
           {% if company.yandex_url %}
           <div class="platform-item">
-            <input type="checkbox" class="platform-checkbox" id="cb_yandex">
             <a class="platform-btn" data-url="{{ company.yandex_url }}" href="{{ company.yandex_url }}" target="_blank" rel="noopener noreferrer" title="Яндекс Карты">
               <img src="/voice-feedback/static/platforms/ya.png" alt="Яндекс Карты">
             </a>
@@ -492,7 +468,6 @@
           {% endif %}
           {% if company.ozon_url %}
           <div class="platform-item">
-            <input type="checkbox" class="platform-checkbox" id="cb_ozon">
             <a class="platform-btn" data-url="{{ company.ozon_url }}" href="{{ company.ozon_url }}" target="_blank" rel="noopener noreferrer" title="Ozon">
               <img src="/voice-feedback/static/platforms/ozon.png" alt="Ozon">
             </a>
@@ -500,7 +475,6 @@
           {% endif %}
           {% if company.wildberries_url %}
           <div class="platform-item">
-            <input type="checkbox" class="platform-checkbox" id="cb_wb">
             <a class="platform-btn" data-url="{{ company.wildberries_url }}" href="{{ company.wildberries_url }}" target="_blank" rel="noopener noreferrer" title="Wildberries">
               <img src="/voice-feedback/static/platforms/wb.png" alt="Wildberries">
             </a>
