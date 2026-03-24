@@ -4,211 +4,323 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Админ — панель</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg-start: #dccada;
-      --bg-end: #ffffff;
-      --card: rgba(255, 255, 255, 0.95);
-      --border: #7d3b73;
-      --muted: #4a3b63;
-      --text: #2c1f3a;
-      --primary: #7d3b73;
-      --primary-hover: #6b2f63;
+    @font-face {
+      font-family: 'Becubik';
+      src: url('/voice-feedback/static/fonts/Becubik.woff2') format('woff2'),
+           url('/voice-feedback/static/fonts/Becubik.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
     }
+    @font-face {
+      font-family: 'Garet';
+      src: url('/voice-feedback/static/fonts/Garet.woff2') format('woff2'),
+           url('/voice-feedback/static/fonts/Garet.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    :root {
+      --primary: #9da6dc;
+      --light-blue: #d2d7f4;
+      --grayish: #d9d9e5;
+      --lightest: #ececff;
+      --white: #ffffff;
+      --text: #1a1a2e;
+      --muted: #6b6b80;
+      --border: #d2d7f4;
+      --card-shadow: 0 4px 24px rgba(157, 166, 220, 0.14);
+      --focus-ring: 0 0 0 4px rgba(157, 166, 220, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      max-width: 1040px;
+      font-family: 'Montserrat', 'Garet', system-ui, sans-serif;
+      max-width: 1060px;
       margin: 0 auto;
-      padding: 28px;
-      background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
+      padding: 32px 28px;
+      background: linear-gradient(150deg, var(--lightest) 0%, var(--white) 55%, var(--grayish) 100%);
+      min-height: 100vh;
       color: var(--text);
     }
-    h1 {
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
+
+    .page-header {
+      margin-bottom: 28px;
     }
-    h2 {
-      margin-top: 0;
+
+    .page-header-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--lightest);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid var(--light-blue);
       margin-bottom: 10px;
+    }
+
+    h1 {
+      font-family: 'Becubik', 'Montserrat', sans-serif;
+      margin: 0 0 6px;
+      font-size: 30px;
+      font-weight: normal;
       letter-spacing: -0.01em;
+      color: var(--text);
     }
+
+    h2 {
+      font-family: 'Garet', 'Montserrat', sans-serif;
+      margin: 0 0 10px;
+      font-size: 17px;
+      font-weight: normal;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+
     .card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 18px 18px 20px;
+      background: var(--white);
+      border-radius: 16px;
+      padding: 20px 22px 22px;
       margin-bottom: 16px;
-      box-shadow: 0 14px 36px rgba(82, 0, 109, 0.15);
-      border: 2px solid var(--border);
+      box-shadow: var(--card-shadow);
+      border: 1.5px solid var(--border);
     }
+
     label {
       display: block;
       margin-bottom: 10px;
-      font-weight: 600;
-      color: #111827;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+      letter-spacing: 0.01em;
     }
+
     input[type="text"],
     input[type="email"],
     textarea {
       width: 100%;
-      padding: 11px 12px;
+      padding: 10px 12px;
       border-radius: 10px;
-      border: 2px solid var(--border);
+      border: 1.5px solid var(--border);
       box-sizing: border-box;
-      margin-top: 6px;
-      background: rgba(255, 255, 255, 0.9);
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      font-size: 14px;
+      margin-top: 5px;
+      background: var(--lightest);
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      font-size: 13.5px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
+      color: var(--text);
     }
+
+    input::placeholder,
+    textarea::placeholder { color: #b0b3c8; }
+
     input[type="text"]:focus,
     input[type="email"]:focus,
     textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(123, 51, 200, 0.25);
-      background: #fff;
+      box-shadow: var(--focus-ring);
+      background: var(--white);
     }
+
     button {
-      padding: 10px 16px;
+      padding: 10px 18px;
       border-radius: 10px;
       border: none;
       cursor: pointer;
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      background: var(--primary);
       color: #fff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
-      transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
-      box-shadow: 0 12px 30px rgba(109, 47, 99, 0.25);
+      font-family: 'Montserrat', sans-serif;
+      letter-spacing: 0.02em;
+      transition: transform 0.12s, box-shadow 0.18s, filter 0.18s;
+      box-shadow: 0 4px 16px rgba(157, 166, 220, 0.32);
     }
+
     button.secondary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      border: 1px solid rgba(125, 59, 115, 0.35);
-      box-shadow: 0 10px 26px rgba(109, 47, 99, 0.2);
+      background: var(--white);
+      color: var(--primary);
+      border: 1.5px solid var(--light-blue);
+      box-shadow: 0 2px 8px rgba(157, 166, 220, 0.12);
     }
+
     button.danger {
-      background: #dc2626;
-      box-shadow: none;
+      background: #ef4444;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.22);
     }
+
     button.small {
-      padding: 6px 10px;
+      padding: 6px 12px;
       font-size: 12px;
+      border-radius: 8px;
     }
+
     button:disabled {
-      opacity: 0.55;
+      opacity: 0.5;
       cursor: default;
       box-shadow: none;
     }
-    button:hover:not(:disabled) { filter: brightness(1.03); transform: translateY(-1px); }
-    button:active:not(:disabled) { transform: translateY(0); box-shadow: 0 8px 22px rgba(37, 99, 235, 0.22); }
+
+    button:hover:not(:disabled) {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+      filter: brightness(0.98);
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 12px;
-      border: 2px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
-      background: #fff;
-      box-shadow: inset 0 1px 0 rgba(125, 59, 115, 0.08);
+      background: var(--white);
     }
+
     .table-wrapper {
       width: 100%;
       overflow-x: auto;
       border-radius: 12px;
+      border: 1.5px solid var(--border);
     }
+
     .table-wrapper table { min-width: 720px; }
+
     th, td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 14px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--grayish);
+      font-size: 13.5px;
       vertical-align: top;
     }
+
     th {
       text-align: left;
-      background: rgba(125, 59, 115, 0.08);
-      color: #2c1f3a;
+      background: var(--lightest);
+      color: var(--muted);
       font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
-    tbody tr:hover { background: #f9fafb; }
+
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f8f9ff; }
+
     .muted {
       color: var(--muted);
       font-size: 13px;
+      font-weight: 500;
     }
+
     .status {
-      font-size: 13px;
+      font-size: 12px;
       margin-top: 4px;
       color: var(--muted);
     }
+
     .tag {
       display: inline-block;
-      padding: 3px 7px;
+      padding: 3px 8px;
       border-radius: 999px;
-      background: rgba(125, 59, 115, 0.1);
+      background: var(--lightest);
       font-size: 11px;
-      margin-right: 6px;
-      color: #4a2c7b;
-      font-weight: 600;
+      margin-right: 4px;
+      color: var(--primary);
+      font-weight: 700;
+      border: 1px solid var(--light-blue);
     }
+
     .row-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
       margin-top: 6px;
     }
+
     .logo-preview {
       max-height: 36px;
+      border-radius: 6px;
     }
+
     .qr-preview {
       max-height: 56px;
       cursor: zoom-in;
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       border-radius: 8px;
       padding: 4px;
-      background: #fff;
-      box-shadow: 0 6px 16px rgba(82, 0, 109, 0.15);
+      background: var(--white);
+      box-shadow: 0 4px 12px rgba(157, 166, 220, 0.14);
     }
+
     .flex {
       display: flex;
-      gap: 16px;
+      gap: 14px;
       align-items: center;
       flex-wrap: wrap;
     }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.55);
+      background: rgba(26, 26, 46, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.2s ease;
+      transition: opacity 0.2s;
+      backdrop-filter: blur(4px);
     }
+
     .modal-backdrop.active {
       opacity: 1;
       pointer-events: all;
     }
+
     .modal-card {
-      background: #fff;
-      padding: 18px;
-      border-radius: 14px;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+      background: var(--white);
+      padding: 24px;
+      border-radius: 18px;
+      box-shadow: 0 16px 60px rgba(157, 166, 220, 0.25);
+      border: 1.5px solid var(--border);
       max-width: 440px;
-      width: calc(100% - 24px);
+      width: calc(100% - 32px);
       text-align: center;
     }
+
     .modal-card img {
       max-width: 100%;
       height: auto;
+      border-radius: 8px;
     }
+
     .modal-card h3 {
-      margin-top: 0;
-      margin-bottom: 12px;
+      font-family: 'Garet', 'Montserrat', sans-serif;
+      margin: 0 0 14px;
+      font-size: 18px;
+      font-weight: normal;
+      color: var(--text);
     }
 
     @media (max-width: 900px) {
-      body { padding: 20px; }
+      body { padding: 18px; }
       h1 { font-size: 24px; }
-      h2 { font-size: 18px; }
+      h2 { font-size: 16px; }
       .card { padding: 16px; }
       .flex { flex-direction: column; align-items: flex-start; }
       .row-actions { flex-direction: column; align-items: stretch; }
@@ -220,75 +332,74 @@
   </style>
 </head>
 <body>
-  <h1>Админ-панель Voice Feedback</h1>
-  <p class="muted">
-    Здесь можно создавать компании, получать ссылки/QR-коды и работать с отзывами.
-  </p>
+  <div class="page-header">
+    <div class="page-header-eyebrow">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+      Voice Feedback · Admin
+    </div>
+    <h1>Админ-панель</h1>
+    <p class="muted">Создавайте компании, получайте ссылки и QR-коды, работайте с отзывами.</p>
+  </div>
 
   <div class="card">
     <h2>Промпт для нейросети</h2>
-    <p class="muted" style="margin-top: -4px;">
-      Используется по умолчанию для всех компаний.
-    </p>
+    <p class="muted" style="margin: -4px 0 10px;">Используется по умолчанию для всех компаний.</p>
     <textarea id="normalizationPrompt" rows="9">{{ normalization_prompt }}</textarea>
-    <div class="flex" style="margin-top: 10px;">
+    <div class="flex" style="margin-top: 12px;">
       <button id="savePrompt" type="button">Сохранить</button>
       <span id="promptStatus" class="status"></span>
     </div>
   </div>
 
-  <!-- Блок создания компании -->
   <div class="card">
     <h2>Создать компанию</h2>
     <form id="createCompanyForm">
       <label>
         Название компании
-        <input type="text" id="companyName" required />
+        <input type="text" id="companyName" placeholder="Например: Кофейня Пряник" required />
       </label>
       <label>
-        Slug (для URL, латиница, без пробелов, например <code>beauty-salon-lux</code>)
-        <input type="text" id="companySlug" required />
+        Slug (для URL, латиница, без пробелов — например <code style="background:var(--lightest);padding:2px 6px;border-radius:5px;font-size:12px;">beauty-salon-lux</code>)
+        <input type="text" id="companySlug" placeholder="beauty-salon-lux" required />
       </label>
       <label>
-        Email (куда отправлять отзывы)
-        <input type="email" id="companyEmail" required />
+        Email для уведомлений об отзывах
+        <input type="email" id="companyEmail" placeholder="hello@example.com" required />
       </label>
-      <button type="submit">Создать компанию</button>
-      <span id="createStatus" class="status"></span>
+      <div class="flex" style="margin-top: 4px;">
+        <button type="submit">Создать компанию</button>
+        <span id="createStatus" class="status"></span>
+      </div>
     </form>
   </div>
 
-  <!-- Список компаний -->
   <div class="card">
     <div class="flex">
       <h2 style="margin-bottom: 0;">Компании</h2>
       <button id="refreshCompanies" type="button" class="secondary small">Обновить список</button>
     </div>
-    <div id="companiesContainer" class="muted" style="margin-top: 8px;">Загрузка...</div>
+    <div id="companiesContainer" class="muted" style="margin-top: 12px;">Загрузка...</div>
   </div>
 
-  <!-- Отчёты -->
   <div class="card">
     <h2>Отзывы</h2>
-    <p class="muted">
-      CSV-файл можно открыть в Excel/Google Sheets.
-    </p>
-    <button id="downloadAllCsv" type="button" class="secondary small">
-      Скачать все отзывы (CSV)
-    </button>
-    <span class="muted" style="margin-left: 8px;">или скачай по компании из таблицы.</span>
+    <p class="muted" style="margin-top: -4px;">CSV-файл можно открыть в Excel или Google Sheets.</p>
+    <div class="flex">
+      <button id="downloadAllCsv" type="button" class="secondary small">Скачать все отзывы (CSV)</button>
+      <span class="muted">или скачайте по компании из таблицы.</span>
+    </div>
   </div>
 
   <div id="qrModal" class="modal-backdrop">
     <div class="modal-card">
       <h3>QR-код</h3>
       <img id="qrModalImg" src="" alt="QR код">
-      <div style="margin-top: 12px;">
+      <div style="margin-top: 16px;">
         <button id="closeQrModal" class="secondary small" type="button">Закрыть</button>
       </div>
     </div>
   </div>
-  
+
   <script>
     // Важно: сервис висит под /voice-feedback/, поэтому префикс:
     const BASE = '/voice-feedback';
@@ -365,7 +476,7 @@
         const tdLinks = document.createElement('td');
         tdLinks.innerHTML = `
           <span class="tag">Публичная страница</span><br>
-          <a href="${publicUrl}" target="_blank">${publicUrl}</a>
+          <a href="${publicUrl}" target="_blank" style="color:var(--primary);font-size:12px;word-break:break-all;">${publicUrl}</a>
         `;
         tr.appendChild(tdLinks);
 
@@ -383,18 +494,18 @@
 
         // Редактирование основных данных компании
         const editInfoBlock = document.createElement('div');
-        editInfoBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e5e7eb; width:100%;';
+        editInfoBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--grayish); width:100%;';
         editInfoBlock.innerHTML = `
-          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">Основные данные</div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">Название</label>
+          <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Основные данные</div>
+          <label style="font-size:12px; font-weight:700; margin-bottom:2px; display:block; color:var(--text);">Название</label>
           <input type="text" data-info-field="name" value="${c.name.replace(/"/g, '&quot;')}"
-            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
-          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">Slug</label>
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
+          <label style="font-size:12px; font-weight:700; margin-bottom:2px; display:block; color:var(--text);">Slug</label>
           <input type="text" data-info-field="slug" value="${c.slug}"
-            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
-          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">Email</label>
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
+          <label style="font-size:12px; font-weight:700; margin-bottom:2px; display:block; color:var(--text);">Email</label>
           <input type="email" data-info-field="email" value="${c.email}"
-            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
           <button class="small secondary" type="button">Сохранить</button>
           <span class="status" style="font-size:12px; margin-left:6px;"></span>
         `;
@@ -404,10 +515,10 @@
 
         // Настройки email
         const emailSettingsBlock = document.createElement('div');
-        emailSettingsBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #e5e7eb;';
+        emailSettingsBlock.style.cssText = 'margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--grayish);';
         const emailCheckboxId = `disable-email-${c.id}`;
         emailSettingsBlock.innerHTML = `
-          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; font-weight:600; color:var(--text);">
             <input type="checkbox" id="${emailCheckboxId}" ${c.disable_email ? 'checked' : ''}>
             Не отправлять отзывы на email
           </label>
@@ -421,7 +532,7 @@
         const logoInputId = `logo-input-${c.id}`;
         const logoBlock = document.createElement('div');
         logoBlock.innerHTML = `
-          <input type="file" id="${logoInputId}" accept="image/*" style="max-width:160px; font-size:12px; margin-bottom:4px;">
+          <input type="file" id="${logoInputId}" accept="image/*" style="max-width:160px; font-size:12px; margin-bottom:4px; font-family:inherit;">
           <button class="small secondary" type="button">Загрузить</button>
         `;
         const uploadBtn = logoBlock.querySelector('button');
@@ -455,13 +566,13 @@
 
         // Ссылки на площадки отзывов
         const linksBlock = document.createElement('div');
-        linksBlock.style.cssText = 'margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; width:100%;';
+        linksBlock.style.cssText = 'margin-top:10px; border-top:1px solid var(--grayish); padding-top:8px; width:100%;';
         linksBlock.innerHTML = `
-          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px;">Ссылки на площадки отзывов</div>
-          <input type="url" placeholder="Яндекс" value="${c.yandex_url || ''}" data-field="yandex_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
-          <input type="url" placeholder="2GIS" value="${c.twogis_url || ''}" data-field="twogis_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
-          <input type="url" placeholder="Ozon" value="${c.ozon_url || ''}" data-field="ozon_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:2px solid var(--border);">
-          <input type="url" placeholder="Wildberries" value="${c.wildberries_url || ''}" data-field="wildberries_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+          <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Ссылки на площадки отзывов</div>
+          <input type="url" placeholder="Яндекс" value="${c.yandex_url || ''}" data-field="yandex_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
+          <input type="url" placeholder="2GIS" value="${c.twogis_url || ''}" data-field="twogis_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
+          <input type="url" placeholder="Ozon" value="${c.ozon_url || ''}" data-field="ozon_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:4px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
+          <input type="url" placeholder="Wildberries" value="${c.wildberries_url || ''}" data-field="wildberries_url" style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
           <button class="small secondary" type="button">Сохранить ссылки</button>
           <span class="status" style="font-size:12px; margin-left:6px;"></span>
         `;
@@ -471,30 +582,30 @@
 
         // Интеграция Bitrix24
         const bitrixBlock = document.createElement('div');
-        bitrixBlock.style.cssText = 'margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; width:100%;';
+        bitrixBlock.style.cssText = 'margin-top:10px; border-top:1px solid var(--grayish); padding-top:8px; width:100%;';
         bitrixBlock.innerHTML = `
-          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">
+          <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em;">
             Интеграция Bitrix24
           </div>
           <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">
             После финализации отзыва в CRM будет создан новый лид.
           </div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">
+          <label style="font-size:12px; font-weight:700; margin-bottom:2px; display:block; color:var(--text);">
             URL входящего webhook
           </label>
           <input type="url"
             placeholder="https://yourcompany.bitrix24.ru/rest/1/xxxxxx/"
             value="${c.bitrix_webhook_url || ''}"
             data-bitrix-field="bitrix_webhook_url"
-            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
-          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
+          <label style="font-size:12px; font-weight:700; margin-bottom:2px; display:block; color:var(--text);">
             Метка источника лида
           </label>
           <input type="text"
             placeholder="VOICE_FEEDBACK_FORM"
             value="${c.bitrix_source_label || ''}"
             data-bitrix-field="bitrix_source_label"
-            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
           <button class="small secondary" type="button">Сохранить Bitrix24</button>
           <span class="status" style="font-size:12px; margin-left:6px;"></span>
         `;
@@ -504,23 +615,23 @@
 
         // Интеграция мессенджера Max
         const maxBlock = document.createElement('div');
-        maxBlock.style.cssText = 'margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; width:100%;';
+        maxBlock.style.cssText = 'margin-top:10px; border-top:1px solid var(--grayish); padding-top:8px; width:100%;';
         maxBlock.innerHTML = `
-          <div style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">
+          <div style="font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em;">
             Мессенджер Max
           </div>
           <div style="font-size:11px; color:var(--muted); margin-bottom:6px;">
             Запустите бота <b>@VoiceFeedbackBot</b> в Max — он пришлёт ваш секретный ключ.
             Вставьте его сюда, и отзывы будут приходить вам в мессенджер.
           </div>
-          <label style="font-size:12px; font-weight:600; margin-bottom:2px; display:block;">
+          <label style="font-size:12px; font-weight:700; margin-bottom:2px; display:block; color:var(--text);">
             Секретный ключ (chat_id)
           </label>
           <input type="text"
             placeholder="Например: 123456789"
             value="${c.max_chat_id || ''}"
             data-max-field="max_chat_id"
-            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:2px solid var(--border);">
+            style="display:block; width:100%; box-sizing:border-box; padding:6px 8px; font-size:12px; margin-bottom:6px; border-radius:8px; border:1.5px solid var(--border); background:var(--lightest); font-family:inherit; color:var(--text);">
           <button class="small secondary" type="button">Сохранить Max</button>
           <span class="status" style="font-size:12px; margin-left:6px;"></span>
         `;
@@ -609,7 +720,7 @@
     function openReviewsPage(companyId) {
       window.location.href = `${BASE}/admin/companies/${companyId}/reviews`;
     }
-    
+
     // Создание компании
     createForm.onsubmit = async (e) => {
       e.preventDefault();
