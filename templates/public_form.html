@@ -9,8 +9,8 @@
     {% if logo_src.startswith('/') %}
       {% set logo_src = '/voice-feedback' ~ logo_src %}
     {% endif %}
-  {% endif %}  
-  
+  {% endif %}
+
   <title>{{ company.name }}</title>
   <meta name="description" content="Оставьте голосовой отзыв">
   <meta property="og:title" content="«{{ company.name }}»">
@@ -18,345 +18,496 @@
   <meta property="og:url" content="{{ request.url }}">
   {% if logo_src %}
     <meta property="og:image" content="{{ logo_src }}">
-  {% endif %}  
+  {% endif %}
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
-    :root {
-      --bg-start: #dccada;
-      --bg-end: #ffffff;
-      --card: rgba(255, 255, 255, 0.9);
-      --border: #7d3b73;
-      --muted: #4a3b63;
-      --text: #2c1f3a;
-      --primary: #7d3b73;
-      --primary-hover: #6b2f63;
+    @font-face {
+      font-family: 'Becubik';
+      src: url('/voice-feedback/static/fonts/Becubik.woff2') format('woff2'),
+           url('/voice-feedback/static/fonts/Becubik.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
     }
+    @font-face {
+      font-family: 'Garet';
+      src: url('/voice-feedback/static/fonts/Garet.woff2') format('woff2'),
+           url('/voice-feedback/static/fonts/Garet.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    :root {
+      --primary:      #9da6dc;
+      --light-blue:   #d2d7f4;
+      --grayish:      #d9d9e5;
+      --lightest:     #ececff;
+      --white:        #ffffff;
+      --text:         #1a1a2e;
+      --muted:        #6b6b80;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Montserrat', 'Garet', sans-serif;
       margin: 0;
       min-height: 100vh;
-      background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
+      background: var(--white);
       color: var(--text);
-      padding: 24px;
-      box-sizing: border-box;
+      padding: 20px 16px 32px;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      flex-direction: column;
+      align-items: center;
     }
-    .container {
-      max-width: 760px;
-      width: 100%;
-      margin: 0 auto 32px;
-    }
-    .card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 14px 36px rgba(82, 0, 109, 0.15);
-      border: 2px solid var(--border);
-      margin-top: 16px;
-    }
-    h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
-    h2 { margin: 0 0 12px; font-size: 20px; }
-    p { margin: 6px 0 12px; color: var(--muted); line-height: 1.5; }
-    .logo {
-      max-height: 90px;
-      margin: 12px auto 4px;
-      display: block;
-    }
-    .step { display: none; }
-    .step.active { display: block; }
-    .input-group { margin: 10px 0 16px; }
-    label { font-weight: 700; display: block; margin-bottom: 8px; color: var(--text); }
-    input[type="text"], textarea {
-      width: 100%;
-      border-radius: 12px;
-      border: 2px solid var(--border);
-      padding: 14px 16px;
-      font-size: 17.3px;
-      box-sizing: border-box;
-      background: rgba(255, 255, 255, 0.9);
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(125, 59, 115, 0.25);
-      background: #fff;
-    }
-    input::placeholder { font-size: 17.3px; }
-    textarea { min-height: 160px; resize: vertical; font-size: 22.5px; }
-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .btn {
-      padding: 10px 16px;
-      border: 2px solid var(--primary);
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 1.15rem;
-      color: #fff;
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      box-shadow: 0 12px 30px rgba(109, 47, 99, 0.25);
-      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
-    }
-    .btn.secondary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      border-color: var(--primary);
-      box-shadow: 0 10px 26px rgba(109, 47, 99, 0.2);
-    }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn:hover:not(:disabled) { transform: translateY(-1px); }
-    .info-box {
-      background: rgba(125, 59, 115, 0.08);
-      color: #4d2a45;
-      border: 1px solid var(--primary);
-      padding: 12px 14px;
-      border-radius: 12px;
-      font-size: 14px;
-      margin-top: 8px;
-    }
-    .status { margin-top: 8px; font-size: 14px; color: var(--muted); }
 
-    .mic-wrapper {
+    .container {
+      max-width: 480px;
+      width: 100%;
       display: flex;
-      justify-content: center;
-      margin: 18px 0 6px;
+      flex-direction: column;
+      align-items: center;
     }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      width: 100%;
+      margin-bottom: 14px;
+    }
+    .header-label {
+      font-family: 'Garet', 'Montserrat', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .logo {
+      max-height: 72px;
+      max-width: 100px;
+      display: block;
+      margin: 6px auto 8px;
+    }
+    .company-name {
+      font-family: 'Becubik', 'Montserrat', sans-serif;
+      font-size: 22px;
+      font-weight: 900;
+      text-transform: uppercase;
+      line-height: 1.25;
+      margin: 0;
+    }
+
+    /* ── Steps ── */
+    .step { display: none; width: 100%; flex-direction: column; align-items: center; }
+    .step.active { display: flex; }
+
+    /* ── Info box ── */
+    .info-box {
+      border: 1.5px solid var(--primary);
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 15px;
+      text-align: center;
+      line-height: 1.55;
+      color: var(--text);
+      width: 100%;
+      margin-bottom: 14px;
+    }
+
+    /* ── Name input ── */
+    .name-input {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 15px 18px;
+      font-size: 16px;
+      font-family: 'Montserrat', sans-serif;
+      background: var(--light-blue);
+      color: var(--text);
+      margin-bottom: 8px;
+      outline: none;
+      transition: box-shadow 0.15s;
+    }
+    .name-input::placeholder { color: var(--text); opacity: 0.65; }
+    .name-input:focus { box-shadow: 0 0 0 2px var(--primary); background: var(--lightest); }
+
+    /* ── Mic section ── */
+    .mic-section { width: 100%; text-align: center; margin: 8px 0; }
+
+    .mic-heading {
+      font-family: 'Becubik', 'Montserrat', sans-serif;
+      font-size: 30px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text);
+      margin: 10px 0 18px;
+      min-height: 40px;
+    }
+
+    .mic-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .arrow-img {
+      width: 88px;
+      height: auto;
+      flex-shrink: 0;
+    }
+
     .mic-button {
-      width: 140px;
-      height: 140px;
+      width: 148px;
+      height: 148px;
       border-radius: 50%;
       border: none;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(145deg, var(--primary), var(--primary-hover));
-      color: #fff;
-      box-shadow: 0 20px 40px rgba(109, 47, 99, 0.3);
+      background: none;
       cursor: pointer;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .mic-button .mic-text {
-      display: none;
-      font-size: 26px;
-      font-weight: 700;
-      text-transform: lowercase;
-    }
-    .mic-button svg {
-      width: 56px;
-      height: 56px;
-    }
-    .mic-button:hover { transform: translateY(-2px); }
-    .mic-button.recording {
-      animation: pulse 1.6s ease-in-out infinite;
-      box-shadow: 0 24px 60px rgba(109, 47, 99, 0.4);
-    }
-    .mic-button.recording svg { display: none; }
-    .mic-button.recording .mic-text { display: block; }
-    .sentiment-row { display: none; }
-    .platforms-block {
-      margin-top: 16px;
-      border-top: 2px solid rgba(125, 59, 115, 0.15);
-      padding-top: 14px;
-    }
-    .platforms-title {
-      font-weight: 700;
-      font-size: 15px;
-      margin: 0 0 10px;
-      color: var(--text);
-    }
-    .platforms-list {
+      padding: 0;
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.2s;
     }
-    .platform-btn {
-      display: inline-block;
-      border-radius: 14px;
-      border: 2px solid rgba(125, 59, 115, 0.18);
-      background: #fff;
-      text-decoration: none;
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.15s ease;
-      box-shadow: 0 4px 14px rgba(109, 47, 99, 0.12);
-      overflow: hidden;
-      line-height: 0;
-    }
-    .platform-btn img {
-      display: block;
-      height: 64px;
-      width: auto;
-      max-width: 160px;
+    .mic-button img {
+      width: 148px;
+      height: 148px;
       object-fit: contain;
+      pointer-events: none;
     }
-    .platform-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 28px rgba(109, 47, 99, 0.22);
-      border-color: var(--primary);
-    }
-    @media (max-width: 480px) {
-      .platform-btn img { height: 52px; }
-    }
-    .platforms-status {
-      margin-top: 8px;
-      font-size: 13px;
-      color: var(--muted);
-      min-height: 18px;
-    }
-    @media (max-width: 640px) {
-      .platforms-list { justify-content: center; }
-    }
+    .mic-button:hover:not(:disabled) { transform: scale(1.04); }
+    .mic-button.recording { animation: pulse 1.6s ease-in-out infinite; }
+
     @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.08); }
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.06); }
       100% { transform: scale(1); }
     }
 
-    @media (max-width: 640px) {
-      body { padding: 16px; align-items: center; text-align: center; }
-      .container { margin-bottom: 24px; text-align: center; }
-      .card { padding: 16px; text-align: center; }
-      h1 { font-size: 22px; line-height: 1.2; }
-      h2 { font-size: 18px; }
-      p, label, .info-box, .status { text-align: center; }
-      .btn-row { flex-direction: column; align-items: stretch; justify-content: center; }
-      .btn-row { flex-direction: column; align-items: stretch; }
-      .btn { width: 100%; text-align: center; }
-      textarea, input[type="text"] { text-align: left; }
-      textarea { min-height: 120px; }
-      .mic-button { width: 120px; height: 120px; }
+    /* ── Status ── */
+    .status-msg {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin: 6px 0;
+      min-height: 18px;
     }
 
+    /* ── Disclaimer ── */
+    .disclaimer {
+      font-size: 11px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      line-height: 1.6;
+      margin: 14px 0 4px;
+    }
+
+    /* ── Section label (step 3 header) ── */
+    .section-label {
+      width: 100%;
+      background: var(--light-blue);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-weight: 700;
+      font-size: 16px;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    /* ── Textarea ── */
+    .review-textarea {
+      width: 100%;
+      border: 1.5px solid var(--primary);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 17px;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 180px;
+      resize: vertical;
+      outline: none;
+      color: var(--text);
+      background: var(--white);
+      margin-bottom: 14px;
+      transition: box-shadow 0.15s;
+    }
+    .review-textarea:focus { box-shadow: 0 0 0 2px var(--primary); }
+
+    /* ── Platforms ── */
+    .platforms-block { width: 100%; margin-bottom: 14px; }
+
+    .platforms-label {
+      background: var(--light-blue);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      text-align: center;
+      color: var(--text);
+      margin-bottom: 14px;
+      line-height: 1.45;
+    }
+    .platforms-label strong { font-weight: 700; }
+
+    .platforms-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: flex-start;
+      padding-left: 4px;
+    }
+
+    .platform-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .platform-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--primary);
+      border-radius: 4px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--white);
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s;
+    }
+    .platform-checkbox:checked {
+      background: var(--primary);
+    }
+    .platform-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 5px;
+      width: 8px; height: 12px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+
+    .platform-btn {
+      display: inline-block;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .platform-btn img {
+      height: 58px;
+      width: auto;
+      display: block;
+      border-radius: 8px;
+    }
+
+    .platforms-note {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin: 10px 0 0;
+      line-height: 1.5;
+    }
+
+    /* ── Buttons ── */
+    .btn-full {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .btn-full:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn-full:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary   { background: var(--light-blue); }
+    .btn-secondary { background: var(--grayish); }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* ── Success modal ── */
     .modal {
       position: fixed;
       inset: 0;
       display: none;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(0, 0, 0, 0.4);
       z-index: 1000;
       padding: 16px;
     }
-
-    .modal.visible {
-      display: flex;
-    }
+    .modal.visible { display: flex; }
 
     .modal__content {
-      background: #fff;
-      border-radius: 14px;
-      padding: 24px;
-      max-width: 420px;
+      background: var(--white);
+      border-radius: 20px;
+      padding: 36px 28px 28px;
+      max-width: 320px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
-      border: 2px solid var(--primary);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
     }
-
     .modal__title {
-      margin: 0 0 10px;
-      font-size: 22px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 20px;
       color: var(--text);
+      line-height: 1.3;
     }
 
-    .modal__text {
-      margin: 0 0 18px;
-      color: var(--muted);
-      line-height: 1.4;
-    }    
+    /* ── Mobile ── */
+    @media (max-width: 400px) {
+      .company-name { font-size: 18px; }
+      .mic-heading  { font-size: 24px; }
+      .mic-button, .mic-button img { width: 120px; height: 120px; }
+      .arrow-img    { width: 64px; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    {% if logo_src %}
-      <img src="{{ logo_src }}" alt="Логотип" class="logo">
-    {% endif %}
-    <h1>Отзыв для {{ company.name }}</h1>
-    <p>Запишите отзыв, ИИ переведёт его в текст — вы сможете поправить и отправить.</p>
-    <div class="card step active" id="step1">
-      <h2>Шаг 1. Запишите голосовой отзыв</h2>
-      <div class="input-group">
-        <label for="userName">Ваше имя (или ник)</label>
-        <input type="text" id="userName" placeholder="Введите ваше имя">
-      </div>
-      <div class="mic-wrapper">
-        <button id="startBtn" class="mic-button" type="button" aria-label="Записать отзыв">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" x2="12" y1="19" y2="22" />
-          </svg>
-          <span class="mic-text">стоп</span>
-        </button>
-      </div>
-      <div class="info-box">Запись делается через микрофон устройства. Не закрывайте вкладку, пока идёт запись.</div>
-      <p id="recordStatus" class="status"></p>
-      <p class="status">Нажимая на кнопку отправить я соглашаюсь с <a href="#">обработкой персональных данных</a>.</p>
+
+    <!-- Always-visible header -->
+    <div class="header">
+      <div class="header-label">Отзыв для</div>
+      {% if logo_src %}
+        <img src="{{ logo_src }}" alt="Логотип" class="logo">
+      {% endif %}
+      <div class="company-name">«{{ company.name }}»</div>
     </div>
 
-    <div class="card step" id="step2">
-      <h2>Шаг 2. Проверка текста</h2>
-      <p class="sentiment-row"><strong>Тональность:</strong> <span id="sentimentSpan"></span></p>
-      <p><strong>Текст, который понял ИИ:</strong></p>
-      <div class="info-box" id="aiText" style="font-size: 1.5rem;"></div>
-      <div class="btn-row">
-        <button id="editBtn" class="btn" type="button">Редактировать и отправить</button>
-        <button class="btn secondary" type="button" onclick="showStep(1)">Записать ещё раз</button>
+    <!-- ── Step 1: Record ── -->
+    <div class="step active" id="step1">
+      <div class="info-box">
+        Запишите аудиоотзыв, а нейросеть переведёт его в текст. Отредактируйте результат и отправляйте!
       </div>
+
+      <input type="text" id="userName" class="name-input" placeholder="Введите ваше имя">
+
+      <div class="mic-section">
+        <div class="mic-heading" id="micHeading">Нажми и говори</div>
+        <div class="mic-row">
+          <img src="/voice-feedback/static/images/arrow_left.png" alt="" class="arrow-img" id="arrowLeft" onerror="this.style.display='none'">
+          <button id="startBtn" class="mic-button" type="button" aria-label="Записать отзыв">
+            <img src="/voice-feedback/static/images/mic_button.png" alt="Микрофон" id="micImg"
+                 onerror="this.style.cssText='display:none'; this.parentElement.innerHTML=micFallbackSVG();">
+          </button>
+          <img src="/voice-feedback/static/images/arrow_right.png" alt="" class="arrow-img" id="arrowRight" onerror="this.style.display='none'">
+        </div>
+      </div>
+
+      <p id="recordStatus" class="status-msg"></p>
+
+      <p class="disclaimer">*Нажимая на кнопку отправить,<br>я соглашаюсь с обработкой<br>персональных данных.</p>
     </div>
 
-    <div class="card step" id="step3">
-      <h2>Шаг 2. Отредактируйте текст и отправьте</h2>
-      <textarea id="finalText" placeholder="Добавьте детали или исправьте текст..." style="font-size: 1.5rem;"></textarea>
-      <div class="btn-row">
-        {% if not company.disable_email %}
-        <button id="sendBtn" class="btn" type="button">Отправить отзыв</button>
-        {% endif %}
-        <button class="btn secondary" type="button" onclick="showStep(1)">Начать заново</button>
-      </div>
-      <p id="sendStatus" class="status"></p>
+    <!-- ── Step 2: hidden intermediate (kept for JS compat) ── -->
+    <div class="step" id="step2"></div>
+
+    <!-- ── Step 3: Edit & Send ── -->
+    <div class="step" id="step3">
+      <div class="section-label">Отредактируйте и отправьте текст</div>
+
+      <textarea id="finalText" class="review-textarea" placeholder="Добавьте детали или исправьте текст..."></textarea>
 
       {%- set has_platforms = company.yandex_url or company.twogis_url or company.ozon_url or company.wildberries_url -%}
       {% if has_platforms %}
       <div class="platforms-block" id="platformsBlock">
-        <p class="platforms-title">Отправьте отзыв на площадки</p>
+        <div class="platforms-label">
+          <strong>Выберите площадку</strong>, на которой<br>хотите разместить отзыв:
+        </div>
         <div class="platforms-list" id="platformsList">
-          {% if company.yandex_url %}
-          <a class="platform-btn" data-url="{{ company.yandex_url }}" href="{{ company.yandex_url }}" target="_blank" rel="noopener noreferrer" title="Яндекс">
-            <img src="/voice-feedback/static/platforms/ya.png" alt="Яндекс">
-          </a>
-          {% endif %}
           {% if company.twogis_url %}
-          <a class="platform-btn" data-url="{{ company.twogis_url }}" href="{{ company.twogis_url }}" target="_blank" rel="noopener noreferrer" title="2GIS">
-            <img src="/voice-feedback/static/platforms/2gis.png" alt="2GIS">
-          </a>
+          <div class="platform-item">
+            <input type="checkbox" class="platform-checkbox" id="cb_twogis">
+            <a class="platform-btn" data-url="{{ company.twogis_url }}" href="{{ company.twogis_url }}" target="_blank" rel="noopener noreferrer" title="2GIS">
+              <img src="/voice-feedback/static/platforms/2gis.png" alt="2GIS">
+            </a>
+          </div>
+          {% endif %}
+          {% if company.yandex_url %}
+          <div class="platform-item">
+            <input type="checkbox" class="platform-checkbox" id="cb_yandex">
+            <a class="platform-btn" data-url="{{ company.yandex_url }}" href="{{ company.yandex_url }}" target="_blank" rel="noopener noreferrer" title="Яндекс Карты">
+              <img src="/voice-feedback/static/platforms/ya.png" alt="Яндекс Карты">
+            </a>
+          </div>
           {% endif %}
           {% if company.ozon_url %}
-          <a class="platform-btn" data-url="{{ company.ozon_url }}" href="{{ company.ozon_url }}" target="_blank" rel="noopener noreferrer" title="Ozon">
-            <img src="/voice-feedback/static/platforms/ozon.png" alt="Ozon">
-          </a>
+          <div class="platform-item">
+            <input type="checkbox" class="platform-checkbox" id="cb_ozon">
+            <a class="platform-btn" data-url="{{ company.ozon_url }}" href="{{ company.ozon_url }}" target="_blank" rel="noopener noreferrer" title="Ozon">
+              <img src="/voice-feedback/static/platforms/ozon.png" alt="Ozon">
+            </a>
+          </div>
           {% endif %}
           {% if company.wildberries_url %}
-          <a class="platform-btn" data-url="{{ company.wildberries_url }}" href="{{ company.wildberries_url }}" target="_blank" rel="noopener noreferrer" title="Wildberries">
-            <img src="/voice-feedback/static/platforms/wb.png" alt="Wildberries">
-          </a>
+          <div class="platform-item">
+            <input type="checkbox" class="platform-checkbox" id="cb_wb">
+            <a class="platform-btn" data-url="{{ company.wildberries_url }}" href="{{ company.wildberries_url }}" target="_blank" rel="noopener noreferrer" title="Wildberries">
+              <img src="/voice-feedback/static/platforms/wb.png" alt="Wildberries">
+            </a>
+          </div>
           {% endif %}
         </div>
-        <p class="platforms-status" id="platformsStatus"></p>
+        <p class="platforms-note">* при переходе на площадку отзыв уже будет скопирован — просто вставьте текст.</p>
+        <p class="status-msg" id="platformsStatus"></p>
       </div>
       {% endif %}
+
+      {% if not company.disable_email %}
+      <button id="sendBtn" class="btn-full btn-primary" type="button">Отправить отзыв</button>
+      {% endif %}
+      <button class="btn-full btn-secondary" type="button" onclick="showStep(1)">Начать заново</button>
+
+      <p id="sendStatus" class="status-msg"></p>
+    </div>
+
+    <div class="footer">Сделано сервисом - НейроОтзыв</div>
+  </div>
+
+  <!-- Success modal -->
+  <div class="modal" id="successModal" aria-hidden="true" role="dialog" aria-labelledby="successModalTitle">
+    <div class="modal__content">
+      <h3 class="modal__title" id="successModalTitle">Спасибо<br>за Ваш отзыв!</h3>
+      <button type="button" class="btn-full btn-primary" id="closeModalBtn">Закрыть</button>
     </div>
   </div>
 
-  <div class="modal" id="successModal" aria-hidden="true" role="dialog" aria-labelledby="successModalTitle">
-    <div class="modal__content">
-      <h3 class="modal__title" id="successModalTitle">Спасибо за ваш отзыв!</h3>
-      <p class="modal__text">Ваш отзыв успешно отправлен.</p>
-      <button type="button" class="btn" id="closeModalBtn">Закрыть</button>
-    </div>
-  </div>
-  
   <script>
     const BASE = '/voice-feedback';
     const companySlug = "{{ company.slug }}";
+
+    function micFallbackSVG() {
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" width="60" height="60">
+        <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" x2="12" y1="19" y2="22"/>
+      </svg>`;
+    }
 
     let mediaRecorder;
     let recorderMime;
@@ -369,6 +520,7 @@
     let fallbackBuffers = [];
     let reviewId = null;
     let normalizedText = "";
+    let isRecording = false;
 
     const step1 = document.getElementById("step1");
     const step2 = document.getElementById("step2");
@@ -376,21 +528,34 @@
 
     function showStep(n) {
       [step1, step2, step3].forEach((el, i) => {
-        el.classList.toggle("active", i === (n-1));
+        el.classList.toggle("active", i === (n - 1));
       });
     }
 
-    const startBtn = document.getElementById("startBtn");
-    const recordStatus = document.getElementById("recordStatus");
+    const startBtn      = document.getElementById("startBtn");
+    const micImg        = document.getElementById("micImg");
+    const micHeading    = document.getElementById("micHeading");
+    const recordStatus  = document.getElementById("recordStatus");
     const userNameInput = document.getElementById("userName");
-    const aiText = document.getElementById("aiText");
+    const aiText        = document.getElementById("aiText");
     const sentimentSpan = document.getElementById("sentimentSpan");
-    const editBtn = document.getElementById("editBtn");
-    const finalText = document.getElementById("finalText");
-    const sendBtn = document.getElementById("sendBtn");
-    const sendStatus = document.getElementById("sendStatus");
-    const successModal = document.getElementById("successModal");
+    const finalText     = document.getElementById("finalText");
+    const sendBtn       = document.getElementById("sendBtn");
+    const sendStatus    = document.getElementById("sendStatus");
+    const successModal  = document.getElementById("successModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
+
+    function setRecordingUI(recording) {
+      if (recording) {
+        micHeading.textContent = "Запись идёт...";
+        if (micImg) micImg.src = "/voice-feedback/static/images/stop_button.png";
+        startBtn.classList.add("recording");
+      } else {
+        micHeading.textContent = "Нажми и говори";
+        if (micImg) micImg.src = "/voice-feedback/static/images/mic_button.png";
+        startBtn.classList.remove("recording");
+      }
+    }
 
     function showSuccessModal() {
       successModal.classList.add("visible");
@@ -403,8 +568,6 @@
       successModal.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
     }
-    
-    let isRecording = false;
 
     startBtn.onclick = async () => {
       if (isRecording) {
@@ -424,15 +587,11 @@
       let preferredMime = null;
 
       try {
-        // 1. Пробуем ogg/opus (идеальный вариант для SpeechKit)
         if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
           preferredMime = 'audio/ogg;codecs=opus';
         } else if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
-          // иногда браузеры чувствительны к пробелам
           preferredMime = 'audio/ogg; codecs=opus';
         }
-
-        // 2. Если ogg не поддерживается — пробуем webm/opus (часто так в Chrome)
         if (!preferredMime) {
           if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             preferredMime = 'audio/webm;codecs=opus';
@@ -440,26 +599,21 @@
             preferredMime = 'audio/webm';
           }
         }
-
-        // 3. Если ни один формат не подошёл — включаем ручной рекордер
         if (!preferredMime) {
           await startFallbackRecorder();
           return;
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
         recorderMime = preferredMime;
-
         mediaRecorder = new MediaRecorder(stream, { mimeType: recorderMime });
-        mediaRecorder.ondataavailable = (e) => {
-          audioChunks.push(e.data);
-        };
+        mediaRecorder.ondataavailable = (e) => { audioChunks.push(e.data); };
         mediaRecorder.onstop = onRecordStop;
         mediaRecorder.start();
-        recordStatus.textContent = "Запись идёт...";
-        startBtn.classList.add("recording");
+
         isRecording = true;
+        setRecordingUI(true);
+        recordStatus.textContent = "";
       } catch (e) {
         console.error(e);
         await startFallbackRecorder();
@@ -473,27 +627,22 @@
         mediaRecorder.stop();
       }
       recordStatus.textContent = "Обработка записи...";
-      startBtn.classList.remove("recording");
       isRecording = false;
+      setRecordingUI(false);
     }
 
     async function onRecordStop() {
       const blob = new Blob(audioChunks, { type: recorderMime || "audio/webm" });
-      startBtn.classList.remove("recording");
       isRecording = false;
+      setRecordingUI(false);
       await uploadAudioBlob(blob, recorderMime || "audio/webm");
     }
 
     async function uploadAudioBlob(blob, mimeType) {
       const formData = new FormData();
-
       let filename = "record.webm";
-
-      if (mimeType && mimeType.startsWith("audio/ogg")) {
-        filename = "record.ogg";
-      } else if (mimeType && mimeType.startsWith("audio/wav")) {
-        filename = "record.wav";
-      }
+      if (mimeType && mimeType.startsWith("audio/ogg")) filename = "record.ogg";
+      else if (mimeType && mimeType.startsWith("audio/wav")) filename = "record.wav";
 
       formData.append("audio", blob, filename);
       formData.append("user_name", userNameInput.value || "");
@@ -510,20 +659,13 @@
           let details = `${res.status} ${res.statusText || ""}`.trim();
           try {
             const errorJson = await res.json();
-            if (errorJson?.detail) {
-              details = `${details}: ${errorJson.detail}`;
-            }
+            if (errorJson?.detail) details = `${details}: ${errorJson.detail}`;
           } catch (_) {
             try {
               const text = await res.text();
-              if (text) {
-                details = `${details}: ${text}`;
-              }
-            } catch (_) {
-              /* ignore secondary errors */
-            }
+              if (text) details = `${details}: ${text}`;
+            } catch (_) {}
           }
-
           recordStatus.textContent = `Ошибка при отправке аудио (${details}).`;
           return;
         }
@@ -531,8 +673,8 @@
         const data = await res.json();
         reviewId = data.review_id;
         normalizedText = data.normalized_text;
-        aiText.textContent = data.normalized_text;
-        sentimentSpan.textContent = data.sentiment;
+        if (aiText) aiText.textContent = data.normalized_text;
+        if (sentimentSpan) sentimentSpan.textContent = data.sentiment;
 
         finalText.value = normalizedText;
         recordStatus.textContent = "";
@@ -541,33 +683,28 @@
         console.error(error);
         recordStatus.textContent = `Сбой сети при отправке аудио: ${error?.message || error}`;
       }
-    }  
+    }
 
     async function startFallbackRecorder() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-
         fallbackContext = new AudioContextClass();
         fallbackStream = stream;
-
         fallbackSource = fallbackContext.createMediaStreamSource(stream);
         fallbackProcessor = fallbackContext.createScriptProcessor(4096, 1, 1);
         const silentGain = fallbackContext.createGain();
         silentGain.gain.value = 0;
-
         fallbackProcessor.onaudioprocess = (event) => {
           fallbackBuffers.push(new Float32Array(event.inputBuffer.getChannelData(0)));
         };
-
         fallbackSource.connect(fallbackProcessor);
         fallbackProcessor.connect(silentGain);
         silentGain.connect(fallbackContext.destination);
-
         useFallback = true;
-        recordStatus.textContent = "Запись идёт...";
-        startBtn.classList.add("recording");
         isRecording = true;
+        setRecordingUI(true);
+        recordStatus.textContent = "";
       } catch (error) {
         console.error(error);
         recordStatus.textContent = "Не удалось получить доступ к микрофону.";
@@ -579,56 +716,41 @@
         recordStatus.textContent = "Не удалось завершить запись.";
         return;
       }
-
       fallbackProcessor.disconnect();
       if (fallbackSource) fallbackSource.disconnect();
-
-      if (fallbackStream) {
-        fallbackStream.getTracks().forEach((track) => track.stop());
-      }
+      if (fallbackStream) fallbackStream.getTracks().forEach((t) => t.stop());
 
       const wavBlob = encodeWAV(fallbackBuffers, fallbackContext.sampleRate);
-
       fallbackBuffers = [];
 
-      if (fallbackContext && typeof fallbackContext.close === 'function') {
-        fallbackContext.close();
-      }
-
+      if (fallbackContext && typeof fallbackContext.close === 'function') fallbackContext.close();
       fallbackContext = null;
       fallbackProcessor = null;
       fallbackSource = null;
       fallbackStream = null;
 
-      startBtn.classList.remove("recording");
       isRecording = false;
+      setRecordingUI(false);
       uploadAudioBlob(wavBlob, "audio/wav");
     }
 
     function encodeWAV(buffers, sampleRate) {
-      const totalLength = buffers.reduce((sum, buffer) => sum + buffer.length, 0);
+      const totalLength = buffers.reduce((sum, b) => sum + b.length, 0);
       const wavBuffer = new ArrayBuffer(44 + totalLength * 2);
       const view = new DataView(wavBuffer);
-
-      // RIFF chunk descriptor
       writeString(view, 0, 'RIFF');
       view.setUint32(4, 36 + totalLength * 2, true);
       writeString(view, 8, 'WAVE');
-
-      // fmt sub-chunk
       writeString(view, 12, 'fmt ');
-      view.setUint32(16, 16, true); // Subchunk1Size
-      view.setUint16(20, 1, true); // AudioFormat (PCM)
-      view.setUint16(22, 1, true); // NumChannels
-      view.setUint32(24, sampleRate, true); // SampleRate
-      view.setUint32(28, sampleRate * 2, true); // ByteRate
-      view.setUint16(32, 2, true); // BlockAlign
-      view.setUint16(34, 16, true); // BitsPerSample
-
-      // data sub-chunk
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
       writeString(view, 36, 'data');
       view.setUint32(40, totalLength * 2, true);
-
       let offset = 44;
       buffers.forEach((buffer) => {
         for (let i = 0; i < buffer.length; i++, offset += 2) {
@@ -636,7 +758,6 @@
           view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
         }
       });
-
       return new Blob([view], { type: 'audio/wav' });
     }
 
@@ -646,24 +767,18 @@
       }
     }
 
-    editBtn.onclick = () => {
-      finalText.value = normalizedText;
-      showStep(3);
-    };
-
-    // Обработка кликов по кнопкам площадок
+    // Platform click: copy text + open URL
     document.querySelectorAll('.platform-btn').forEach(function(btn) {
       btn.addEventListener('click', async function(e) {
         e.preventDefault();
         const url = btn.dataset.url;
         const statusEl = document.getElementById('platformsStatus');
-        if (!statusEl) return;
-        statusEl.textContent = '';
+        if (statusEl) statusEl.textContent = '';
         try {
           await navigator.clipboard.writeText(finalText.value);
-          statusEl.textContent = 'Текст отзыва скопирован. Откроем площадку в новой вкладке.';
+          if (statusEl) statusEl.textContent = 'Текст отзыва скопирован. Откроем площадку в новой вкладке.';
         } catch (_) {
-          statusEl.textContent = 'Не удалось скопировать автоматически. Скопируйте текст вручную.';
+          if (statusEl) statusEl.textContent = 'Не удалось скопировать автоматически. Скопируйте текст вручную.';
         }
         window.open(url, '_blank', 'noopener,noreferrer');
       });
@@ -675,34 +790,27 @@
         text: finalText.value,
         user_name: userNameInput.value || null,
       };
-
       const res = await fetch(`${BASE}/api/public/reviews/${reviewId}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-
       const data = await res.json();
       if (data.status === "ok") {
         sendStatus.textContent = data.email_sent
           ? "Спасибо! Ваш отзыв отправлен."
           : "Отзыв сохранён, но письмо не удалось отправить (ошибка email).";
-
         if (sendBtn) sendBtn.disabled = true;
         showSuccessModal();
         return;
       }
-
       sendStatus.textContent = "Не удалось отправить отзыв. Попробуйте ещё раз позже.";
     };
-    
-    successModal.addEventListener("click", (event) => {
-      if (event.target === successModal) {
-        hideSuccessModal();
-      }
-    });
 
-    closeModalBtn.addEventListener("click", hideSuccessModal);    
+    successModal.addEventListener("click", (e) => {
+      if (e.target === successModal) hideSuccessModal();
+    });
+    closeModalBtn.addEventListener("click", hideSuccessModal);
   </script>
 </body>
 </html>
