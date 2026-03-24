@@ -58,7 +58,7 @@
       min-height: 100vh;
       background: var(--white);
       color: var(--text);
-      padding: 20px 16px 32px;
+      padding: 20px 16px 80px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -74,31 +74,36 @@
 
     /* ── Header ── */
     .header {
-      text-align: center;
       width: 100%;
       margin-bottom: 14px;
     }
-    .header-label {
-      font-family: 'Garet', 'Montserrat', sans-serif;
-      font-size: 13px;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--text);
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
       margin-bottom: 6px;
     }
     .logo {
-      max-height: 72px;
-      max-width: 100px;
-      display: block;
-      margin: 6px auto 8px;
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .header-label {
+      font-family: 'Garet', 'Montserrat', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text);
     }
     .company-name {
       font-family: 'Becubik', 'Montserrat', sans-serif;
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 900;
       text-transform: uppercase;
       line-height: 1.25;
       margin: 0;
+      text-align: center;
     }
 
     /* ── Steps ── */
@@ -109,11 +114,12 @@
     .info-box {
       border: 1.5px solid var(--primary);
       border-radius: 14px;
-      padding: 14px 18px;
-      font-size: 15px;
+      padding: 16px 20px;
+      font-size: 17px;
+      font-family: 'Garet', 'Montserrat', sans-serif;
       text-align: center;
       line-height: 1.55;
-      color: var(--text);
+      color: #888;
       width: 100%;
       margin-bottom: 14px;
     }
@@ -123,16 +129,18 @@
       width: 100%;
       border: none;
       border-radius: 12px;
-      padding: 15px 18px;
-      font-size: 16px;
+      padding: 17px 18px;
+      font-size: 20px;
       font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
       background: var(--light-blue);
-      color: var(--text);
+      color: #000;
       margin-bottom: 8px;
       outline: none;
+      text-align: center;
       transition: box-shadow 0.15s;
     }
-    .name-input::placeholder { color: var(--text); opacity: 0.65; }
+    .name-input::placeholder { color: #000; opacity: 0.75; }
     .name-input:focus { box-shadow: 0 0 0 2px var(--primary); background: var(--lightest); }
 
     /* ── Mic section ── */
@@ -157,14 +165,14 @@
     }
 
     .arrow-img {
-      width: 88px;
+      width: 110px;
       height: auto;
       flex-shrink: 0;
     }
 
     .mic-button {
-      width: 148px;
-      height: 148px;
+      width: 190px;
+      height: 190px;
       border-radius: 50%;
       border: none;
       background: none;
@@ -177,8 +185,8 @@
       transition: transform 0.2s;
     }
     .mic-button img {
-      width: 148px;
-      height: 148px;
+      width: 190px;
+      height: 190px;
       object-fit: contain;
       pointer-events: none;
     }
@@ -340,10 +348,30 @@
 
     /* ── Footer ── */
     .footer {
-      margin-top: 24px;
-      font-size: 13px;
-      color: var(--muted);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--white);
+      border-top: 1px solid #ddd;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #000;
       text-align: center;
+      z-index: 10;
+    }
+
+    /* ── Semicircle decoration ── */
+    .deco-semicircle {
+      position: fixed;
+      bottom: -110px;
+      right: -110px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: var(--light-blue);
+      z-index: 1;
+      pointer-events: none;
     }
 
     /* ── Success modal ── */
@@ -379,10 +407,11 @@
 
     /* ── Mobile ── */
     @media (max-width: 400px) {
-      .company-name { font-size: 18px; }
-      .mic-heading  { font-size: 24px; }
-      .mic-button, .mic-button img { width: 120px; height: 120px; }
-      .arrow-img    { width: 64px; }
+      .company-name { font-size: 19px; }
+      .mic-heading  { font-size: 26px; }
+      .mic-button, .mic-button img { width: 150px; height: 150px; }
+      .arrow-img    { width: 80px; }
+      .header-label { font-size: 15px; }
     }
   </style>
 </head>
@@ -391,10 +420,12 @@
 
     <!-- Always-visible header -->
     <div class="header">
-      <div class="header-label">Отзыв для</div>
-      {% if logo_src %}
-        <img src="{{ logo_src }}" alt="Логотип" class="logo">
-      {% endif %}
+      <div class="header-top">
+        {% if logo_src %}
+          <img src="{{ logo_src }}" alt="Логотип" class="logo">
+        {% endif %}
+        <div class="header-label">Отзыв для</div>
+      </div>
       <div class="company-name">«{{ company.name }}»</div>
     </div>
 
@@ -485,8 +516,12 @@
       <p id="sendStatus" class="status-msg"></p>
     </div>
 
-    <div class="footer">Сделано сервисом - НейроОтзыв</div>
   </div>
+
+  <!-- Semicircle decoration bottom-right -->
+  <div class="deco-semicircle"></div>
+
+  <div class="footer">Сделано сервисом - НейроОтзыв</div>
 
   <!-- Success modal -->
   <div class="modal" id="successModal" aria-hidden="true" role="dialog" aria-labelledby="successModalTitle">
