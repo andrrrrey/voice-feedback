@@ -101,7 +101,7 @@
       color: var(--text);
     }
     .company-name {
-      font-family: 'Becubik', 'Montserrat', sans-serif;
+      font-family: 'Garet', 'Montserrat', sans-serif;
       font-size: 24px;
       font-weight: 900;
       text-transform: uppercase;
@@ -150,7 +150,7 @@
     .mic-section { width: 100%; text-align: center; margin: 8px 0; }
 
     .mic-heading {
-      font-family: 'Becubik', 'Montserrat', sans-serif;
+      font-family: 'Garet', 'Montserrat', sans-serif;
       font-size: 30px;
       font-weight: 900;
       text-transform: uppercase;
@@ -278,7 +278,15 @@
 
     .platform-item {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .platform-ext-link {
+      font-size: 8px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 4px;
     }
 
     .platform-btn {
@@ -385,6 +393,35 @@
       line-height: 1.3;
     }
 
+    /* ── Copy popup ── */
+    .copy-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--white);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+      z-index: 1001;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      max-width: 320px;
+      width: 90%;
+      display: none;
+    }
+    .copy-popup.visible { display: block; }
+    .copy-popup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      display: none;
+    }
+    .copy-popup-overlay.visible { display: block; }
+
     /* ── Mobile ── */
     @media (max-width: 400px) {
       .company-name { font-size: 19px; }
@@ -420,7 +457,7 @@
       <input type="text" id="userName" class="name-input" placeholder="Введите ваше имя">
 
       <div class="mic-section">
-        <div class="mic-heading" id="micHeading">Нажми и говори</div>
+        <div class="mic-heading" id="micHeading">Нажмите и говорите</div>
         <div class="mic-row">
           <img src="/voice-feedback/static/images/arrow_left.png" alt="" class="arrow-img" id="arrowLeft" onerror="this.style.display='none'">
           <button id="startBtn" class="mic-button" type="button" aria-label="Записать отзыв">
@@ -433,7 +470,7 @@
 
       <p id="recordStatus" class="status-msg"></p>
 
-      <p class="disclaimer">*Нажимая на кнопку отправить,<br>я соглашаюсь с обработкой<br>персональных данных.</p>
+      <p class="disclaimer" style="margin-top: 6px;">*Нажимая на кнопку отправить,<br>я соглашаюсь с обработкой<br>персональных данных.</p>
     </div>
 
     <!-- ── Step 2: hidden intermediate (kept for JS compat) ── -->
@@ -451,12 +488,14 @@
         <div class="platforms-label">
           <strong>Выберите площадку</strong>, на которой<br>хотите разместить отзыв:
         </div>
+        <p class="platforms-note" style="font-size: 14px;">* при переходе на площадку отзыв уже будет скопирован — просто вставьте текст.</p>
         <div class="platforms-list" id="platformsList">
           {% if company.twogis_url %}
           <div class="platform-item">
             <a class="platform-btn" data-url="{{ company.twogis_url }}" href="{{ company.twogis_url }}" target="_blank" rel="noopener noreferrer" title="2GIS">
               <img src="/voice-feedback/static/platforms/2gis.png" alt="2GIS">
             </a>
+            <span class="platform-ext-link">переход на внешний сайт</span>
           </div>
           {% endif %}
           {% if company.yandex_url %}
@@ -464,6 +503,7 @@
             <a class="platform-btn" data-url="{{ company.yandex_url }}" href="{{ company.yandex_url }}" target="_blank" rel="noopener noreferrer" title="Яндекс Карты">
               <img src="/voice-feedback/static/platforms/ya.png" alt="Яндекс Карты">
             </a>
+            <span class="platform-ext-link">переход на внешний сайт</span>
           </div>
           {% endif %}
           {% if company.ozon_url %}
@@ -471,6 +511,7 @@
             <a class="platform-btn" data-url="{{ company.ozon_url }}" href="{{ company.ozon_url }}" target="_blank" rel="noopener noreferrer" title="Ozon">
               <img src="/voice-feedback/static/platforms/ozon.png" alt="Ozon">
             </a>
+            <span class="platform-ext-link">переход на внешний сайт</span>
           </div>
           {% endif %}
           {% if company.wildberries_url %}
@@ -478,10 +519,10 @@
             <a class="platform-btn" data-url="{{ company.wildberries_url }}" href="{{ company.wildberries_url }}" target="_blank" rel="noopener noreferrer" title="Wildberries">
               <img src="/voice-feedback/static/platforms/wb.png" alt="Wildberries">
             </a>
+            <span class="platform-ext-link">переход на внешний сайт</span>
           </div>
           {% endif %}
         </div>
-        <p class="platforms-note">* при переходе на площадку отзыв уже будет скопирован — просто вставьте текст.</p>
         <p class="status-msg" id="platformsStatus"></p>
       </div>
       {% endif %}
@@ -490,6 +531,7 @@
       <button id="sendBtn" class="btn-full btn-primary" type="button">Отправить отзыв</button>
       {% endif %}
       <button class="btn-full btn-secondary" type="button" onclick="showStep(1)">Начать заново</button>
+      <p style="font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; margin: 4px 0 0;">Логотипы и наименования товарных знаков принадлежат их законным владельцам. Использование носит информационный характер.</p>
 
       <p id="sendStatus" class="status-msg"></p>
     </div>
@@ -499,7 +541,11 @@
   <!-- Semicircle decoration bottom-right (replace with your image) -->
   <img src="/voice-feedback/static/images/semicircle.png" alt="" class="deco-semicircle" onerror="this.style.display='none'">
 
-  <div class="footer">Сделано сервисом - НейроОтзыв</div>
+  <div class="footer">Сделано сервисом - <a href="https://neirootzyv.ru" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">НейроОтзыв</a></div>
+
+  <!-- Copy popup -->
+  <div class="copy-popup-overlay" id="copyPopupOverlay"></div>
+  <div class="copy-popup" id="copyPopup"></div>
 
   <!-- Success modal -->
   <div class="modal" id="successModal" aria-hidden="true" role="dialog" aria-labelledby="successModalTitle">
@@ -564,7 +610,7 @@
         if (micImg) micImg.src = "/voice-feedback/static/images/stop_button.png";
         startBtn.classList.add("recording");
       } else {
-        micHeading.textContent = "Нажми и говори";
+        micHeading.textContent = "Нажмите и говорите";
         if (micImg) micImg.src = "/voice-feedback/static/images/mic_button.png";
         startBtn.classList.remove("recording");
       }
@@ -780,18 +826,32 @@
       }
     }
 
+    // Copy popup helpers
+    const copyPopup = document.getElementById('copyPopup');
+    const copyPopupOverlay = document.getElementById('copyPopupOverlay');
+
+    function showCopyPopup(text) {
+      copyPopup.textContent = text;
+      copyPopup.classList.add('visible');
+      copyPopupOverlay.classList.add('visible');
+      setTimeout(hideCopyPopup, 2500);
+    }
+    function hideCopyPopup() {
+      copyPopup.classList.remove('visible');
+      copyPopupOverlay.classList.remove('visible');
+    }
+    copyPopupOverlay.addEventListener('click', hideCopyPopup);
+
     // Platform click: copy text + open URL
     document.querySelectorAll('.platform-btn').forEach(function(btn) {
       btn.addEventListener('click', async function(e) {
         e.preventDefault();
         const url = btn.dataset.url;
-        const statusEl = document.getElementById('platformsStatus');
-        if (statusEl) statusEl.textContent = '';
         try {
           await navigator.clipboard.writeText(finalText.value);
-          if (statusEl) statusEl.textContent = 'Текст отзыва скопирован. Откроем площадку в новой вкладке.';
+          showCopyPopup('Текст отзыва скопирован. Откроем площадку в новой вкладке.');
         } catch (_) {
-          if (statusEl) statusEl.textContent = 'Не удалось скопировать автоматически. Скопируйте текст вручную.';
+          showCopyPopup('Не удалось скопировать автоматически. Скопируйте текст вручную.');
         }
         window.open(url, '_blank', 'noopener,noreferrer');
       });
