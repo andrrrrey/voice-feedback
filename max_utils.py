@@ -35,16 +35,24 @@ SENTIMENT_LABELS = {
 # Низкоуровневые вспомогательные функции
 # ---------------------------------------------------------------------------
 
+def _auth_headers() -> dict:
+    """
+    Заголовки авторизации для Bot API Max.
+
+    С 2025 г. передача токена через query-параметр access_token больше не
+    поддерживается — токен нужно передавать в заголовке Authorization.
+    """
+    return {"Authorization": MAX_BOT_TOKEN}
+
+
 def _api_get(method: str, params: dict | None = None) -> dict | None:
     """GET-запрос к Bot API Max."""
     if not MAX_BOT_TOKEN:
         return None
     url = f"{MAX_BOT_API_URL}/{method}"
-    p = {"access_token": MAX_BOT_TOKEN}
-    if params:
-        p.update(params)
+    p = dict(params) if params else {}
     try:
-        r = requests.get(url, params=p, timeout=35)
+        r = requests.get(url, params=p, headers=_auth_headers(), timeout=35)
         r.raise_for_status()
         return r.json()
     except requests.RequestException as exc:
@@ -57,11 +65,9 @@ def _api_post(method: str, payload: dict, extra_params: dict | None = None) -> d
     if not MAX_BOT_TOKEN:
         return None
     url = f"{MAX_BOT_API_URL}/{method}"
-    params = {"access_token": MAX_BOT_TOKEN}
-    if extra_params:
-        params.update(extra_params)
+    params = dict(extra_params) if extra_params else {}
     try:
-        r = requests.post(url, params=params, json=payload, timeout=10)
+        r = requests.post(url, params=params, json=payload, headers=_auth_headers(), timeout=10)
         r.raise_for_status()
         return r.json()
     except requests.RequestException as exc:
